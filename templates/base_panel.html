@@ -1,10 +1,11 @@
-<!DOCTYPE html>
+{% load static %}<!DOCTYPE html>
 <html lang="es-CL">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Panel Operacional — Vivero Leufucades{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{% static 'css/botanico.css' %}">
 </head>
 <body class="bg-[#F9FAF8] text-[#1F2933] text-[15px] antialiased">
     <div class="h-screen overflow-hidden flex flex-col md:flex-row">
@@ -233,39 +234,7 @@
         </main>
     </div>
 
-    <script>
-    (function () {
-        const sidebar = document.getElementById('panel-sidebar');
-        const backdrop = document.getElementById('sidebar-backdrop');
-        const openBtn = document.getElementById('sidebar-open-btn');
-        const closeBtn = document.getElementById('sidebar-close-btn');
-
-        if (!sidebar || !backdrop || !openBtn) return;
-
-        function abrirDrawer() {
-            sidebar.classList.remove('-translate-x-full');
-            sidebar.classList.add('translate-x-0');
-            backdrop.classList.remove('hidden');
-            openBtn.setAttribute('aria-expanded', 'true');
-        }
-
-        function cerrarDrawer() {
-            sidebar.classList.add('-translate-x-full');
-            sidebar.classList.remove('translate-x-0');
-            backdrop.classList.add('hidden');
-            openBtn.setAttribute('aria-expanded', 'false');
-        }
-
-        openBtn.addEventListener('click', abrirDrawer);
-        if (closeBtn) closeBtn.addEventListener('click', cerrarDrawer);
-        backdrop.addEventListener('click', cerrarDrawer);
-        document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape' && !backdrop.classList.contains('hidden')) {
-                cerrarDrawer();
-            }
-        });
-    })();
-    </script>
+    <script src="{% static 'js/panel.js' %}" defer></script>
     {% block extra_scripts %}{% endblock %}
 </body>
 </html>

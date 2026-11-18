@@ -1,0 +1,53 @@
+﻿/* Botánico Minimalista — Vivero Leufucades */
+:root {
+    --verde-bosque: #1B4332;
+    --verde-hoja: #2D6A4F;
+    --canvas: #F9FAF8;
+    --borde: #E2E8E4;
+    --acento-suave: #D8F3DC;
+}
+
+/* Carrusel móvil de temporadas: scrollbar oculto */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* Skeleton Loaders */
+@keyframes skeleton-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
+}
+.img-skeleton {
+    animation: skeleton-pulse 1.6s ease-in-out infinite;
+    transition: opacity 0.3s ease;
+}
+#catalogo-skeleton-grid:not(.hidden) {
+    display: grid;
+}
+@media (prefers-reduced-motion: reduce) {
+    .img-skeleton { animation: none; }
+}
+
+/* Comprobante de caja: impresión limpia */
+@media print {
+    aside,
+    header,
+    .no-print {
+        display: none !important;
+    }
+    body,
+    main {
+        background: #FFFFFF !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    #comprobante-imprimible {
+        border: 1px solid #000000 !important;
+        box-shadow: none !important;
+        max-width: 100% !important;
+    }
+}

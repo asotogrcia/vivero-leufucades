@@ -1,19 +1,11 @@
-<!DOCTYPE html>
+{% load static %}<!DOCTYPE html>
 <html lang="es-CL">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Catálogo Hortícola — Vivero Leufucades{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-    </style>
+    <link rel="stylesheet" href="{% static 'css/botanico.css' %}">
 </head>
 <body class="min-h-screen bg-[#F9FAF8] text-[#1F2933] text-[15px] antialiased flex flex-col overflow-x-hidden">
     <header class="bg-white border-b border-[#E2E8E4] sticky top-0 z-30">

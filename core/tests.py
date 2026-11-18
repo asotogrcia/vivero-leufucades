@@ -1070,7 +1070,9 @@ class VentasPOSServiceAndViewsTests(TestCase):
         self.assertIn('$10.000', html_comp)
         self.assertIn('$8.403', html_comp)
         self.assertIn('$1.597', html_comp)
-        self.assertIn('window.print()', html_comp)
+        self.assertIn('data-print', html_comp)
+        self.assertIn('js/panel.', html_comp)
+        self.assertNotIn('onclick=', html_comp)
         self.assertIn('Nueva Venta', html_comp)
 
 

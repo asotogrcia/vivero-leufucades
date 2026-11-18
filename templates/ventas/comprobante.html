@@ -11,24 +11,6 @@
 {% endblock %}
 
 {% block content %}
-<style>
-@media print {
-    aside, header, .no-print {
-        display: none !important;
-    }
-    body, main {
-        background: #FFFFFF !important;
-        padding: 0 !important;
-        margin: 0 !important;
-    }
-    #comprobante-imprimible {
-        border: 1px solid #000000 !important;
-        box-shadow: none !important;
-        max-width: 100% !important;
-    }
-}
-</style>
-
 <div class="max-w-2xl mx-auto space-y-6">
     <!-- Acciones superiores -->
     <div class="no-print flex flex-wrap items-center justify-between gap-3">
@@ -40,7 +22,7 @@
         </a>
         <button
             type="button"
-            onclick="window.print()"
+            data-print
             class="min-h-[44px] inline-flex items-center px-4 rounded-lg border border-[#E2E8E4] bg-white hover:bg-[#F9FAF8] text-[#1F2933] text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-[#1B4332]"
         >
             Imprimir Comprobante
@@ -149,7 +131,7 @@
             <div class="no-print pt-2 flex flex-col sm:flex-row items-center justify-end gap-3">
                 <button
                     type="button"
-                    onclick="window.print()"
+                    data-print
                     class="w-full sm:w-auto min-h-[44px] px-5 rounded-lg border border-[#E2E8E4] bg-white hover:bg-[#F9FAF8] text-[#1F2933] text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-[#1B4332]"
                 >
                     Imprimir Comprobante

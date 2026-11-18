@@ -157,7 +157,7 @@
                                 <form
                                     method="post"
                                     action="{% url 'core:producto_desactivar' prod.id_producto %}"
-                                    onsubmit="return confirm('¿Desactivar {{ prod.nombre_comun|escapejs }} del catálogo?');"
+                                    data-confirm="¿Desactivar {{ prod.nombre_comun|escape }} del catálogo?"
                                     class="inline"
                                 >
                                     {% csrf_token %}
@@ -281,37 +281,3 @@
 </div>
 {% endblock %}
 
-{% block extra_scripts %}
-<script>
-(function () {
-    const modal = document.getElementById('modal-ajuste-stock');
-    const form = document.getElementById('form-ajuste-stock');
-    const subtitulo = document.getElementById('modal-ajuste-subtitulo');
-    const cerrarBtn = document.getElementById('btn-cerrar-ajuste');
-    const cancelarBtn = document.getElementById('btn-cancelar-ajuste');
-
-    function cerrar() {
-        modal.classList.add('hidden');
-    }
-
-    document.querySelectorAll('.btn-abrir-ajuste').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            const id = btn.dataset.ajusteId;
-            const nombre = btn.dataset.ajusteNombre;
-            const stock = btn.dataset.ajusteStock;
-            form.action = '/inventario/ajustar/' + id + '/';
-            subtitulo.textContent = nombre + ' (Stock actual: ' + stock + ' un.)';
-            modal.classList.remove('hidden');
-            const qtyInput = document.getElementById('id_cantidad');
-            if (qtyInput) qtyInput.focus();
-        });
-    });
-
-    if (cerrarBtn) cerrarBtn.addEventListener('click', cerrar);
-    if (cancelarBtn) cancelarBtn.addEventListener('click', cerrar);
-    modal.addEventListener('click', function (e) {
-        if (e.target === modal) cerrar();
-    });
-})();
-</script>
-{% endblock %}

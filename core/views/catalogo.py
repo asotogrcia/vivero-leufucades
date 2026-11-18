@@ -20,7 +20,15 @@ class CatalogoListView(ListView):
         return 'actual'
 
     def get_queryset(self):
-        queryset = Producto.objects.select_related('id_temporada').filter(activo=True)
+        queryset = (
+            Producto.objects.select_related('id_temporada')
+            .only(
+                'id_producto', 'sku', 'nombre_comun', 'nombre_cientifico',
+                'precio_unitario', 'stock_actual', 'es_fijo',
+                'descripcion_cuidados', 'url_imagen', 'id_temporada__nombre',
+            )
+            .filter(activo=True)
+        )
 
         temporada_param = self._resolver_temporada_param()
         if temporada_param == 'actual':
