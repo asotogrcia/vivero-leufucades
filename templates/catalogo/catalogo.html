@@ -1,0 +1,189 @@
+{% extends 'base_publico.html' %}
+{% load vivero_extras %}
+
+{% block title %}Catálogo — Vivero Leufucades{% endblock %}
+
+{% block content %}
+<section class="mb-6 bg-white border border-[#E2E8E4] rounded-xl p-5 sm:p-6">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <div class="flex flex-wrap items-center gap-2 mb-2">
+                {% if temporada_activa %}
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#D8F3DC] text-[#1B4332]">
+                        <span class="w-2 h-2 rounded-full bg-[#1B4332]"></span>
+                        Ciclo Activo: {{ temporada_activa.nombre }}
+                    </span>
+                {% else %}
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-[#F9FAF8] text-[#52606D] border border-[#E2E8E4]">
+                        Sin ciclo estacional activo
+                    </span>
+                {% endif %}
+                <span class="text-xs text-[#52606D]">
+                    {{ productos|length }} especie{{ productos|length|pluralize:"s" }} en vista
+                </span>
+            </div>
+            <h1 class="text-2xl font-semibold text-[#1F2933] tracking-tight">
+                Catálogo de Especies y Plantas
+            </h1>
+            <p class="text-sm text-[#52606D] mt-1">
+                Cultivo estacional y especies permanentes disponibles para retiro en mesón en Vivero Leufucades.
+            </p>
+        </div>
+
+        <form method="get" action="{% url 'core:catalogo' %}" class="w-full sm:w-auto sm:min-w-[300px] flex items-center gap-2">
+            {% if temporada_seleccionada and temporada_seleccionada != 'actual' %}
+                <input type="hidden" name="temporada" value="{{ temporada_seleccionada }}">
+            {% endif %}
+            <label for="buscador-filtro" class="sr-only">Buscar en catálogo</label>
+            <input
+                id="buscador-filtro"
+                type="search"
+                name="q"
+                value="{{ query }}"
+                placeholder="Buscar nombre, científico o SKU..."
+                class="w-full min-h-[44px] px-3.5 rounded-lg border border-[#E2E8E4] bg-[#F9FAF8] text-[#1F2933] placeholder-[#52606D] focus:outline-none focus:ring-2 focus:ring-[#2D6A4F] focus:bg-white"
+            >
+            <button
+                type="submit"
+                class="min-h-[44px] px-4 rounded-lg bg-[#1B4332] hover:bg-[#2D6A4F] text-white text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[#2D6A4F]"
+            >
+                Filtrar
+            </button>
+        </form>
+    </div>
+
+    <nav aria-label="Filtros por temporada" class="mt-5 pt-4 border-t border-[#E2E8E4] flex flex-wrap items-center gap-2">
+        <a
+            href="{% url 'core:catalogo' %}?temporada=actual{% if query %}&q={{ query|urlencode }}{% endif %}"
+            class="min-h-[44px] inline-flex items-center px-4 rounded-full text-sm font-medium border transition-colors focus:outline-none focus:ring-2 focus:ring-[#2D6A4F] {% if temporada_seleccionada == 'actual' %}bg-[#1B4332] text-white border-[#1B4332]{% else %}bg-white text-[#52606D] border-[#E2E8E4] hover:border-[#2D6A4F] hover:text-[#1B4332]{% endif %}"
+        >
+            Ciclo Actual
+        </a>
+
+        <a
+            href="{% url 'core:catalogo' %}?temporada=fijos{% if query %}&q={{ query|urlencode }}{% endif %}"
+            class="min-h-[44px] inline-flex items-center px-4 rounded-full text-sm font-medium border transition-colors focus:outline-none focus:ring-2 focus:ring-[#2D6A4F] {% if temporada_seleccionada == 'fijos' %}bg-[#1B4332] text-white border-[#1B4332]{% else %}bg-white text-[#52606D] border-[#E2E8E4] hover:border-[#2D6A4F] hover:text-[#1B4332]{% endif %}"
+        >
+            Todo el año (Permanentes)
+        </a>
+
+        {% for temp in temporadas %}
+            <a
+                href="{% url 'core:catalogo' %}?temporada={{ temp.id_temporada }}{% if query %}&q={{ query|urlencode }}{% endif %}"
+                class="min-h-[44px] inline-flex items-center px-4 rounded-full text-sm font-medium border transition-colors focus:outline-none focus:ring-2 focus:ring-[#2D6A4F] {% if temporada_seleccionada == temp.id_temporada|stringformat:'s' %}bg-[#1B4332] text-white border-[#1B4332]{% else %}bg-white text-[#52606D] border-[#E2E8E4] hover:border-[#2D6A4F] hover:text-[#1B4332]{% endif %}"
+            >
+                {{ temp.nombre }}
+            </a>
+        {% endfor %}
+
+        <a
+            href="{% url 'core:catalogo' %}?temporada=todas{% if query %}&q={{ query|urlencode }}{% endif %}"
+            class="min-h-[44px] inline-flex items-center px-4 rounded-full text-sm font-medium border transition-colors focus:outline-none focus:ring-2 focus:ring-[#2D6A4F] {% if temporada_seleccionada == 'todas' %}bg-[#1B4332] text-white border-[#1B4332]{% else %}bg-white text-[#52606D] border-[#E2E8E4] hover:border-[#2D6A4F] hover:text-[#1B4332]{% endif %}"
+        >
+            Todas
+        </a>
+
+        {% if query or temporada_seleccionada != 'actual' %}
+            <a
+                href="{% url 'core:catalogo' %}"
+                class="min-h-[44px] inline-flex items-center px-3 text-xs font-medium text-[#52606D] hover:text-[#1B4332] underline ml-auto"
+            >
+                Limpiar filtros
+            </a>
+        {% endif %}
+    </nav>
+</section>
+
+{% if productos %}
+    <section aria-label="Listado de especies" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+        {% for producto in productos %}
+            <article class="bg-white border border-[#E2E8E4] rounded-xl overflow-hidden flex flex-col transition-shadow hover:shadow-sm">
+                <div class="aspect-[4/3] bg-[#F9FAF8] border-b border-[#E2E8E4] overflow-hidden flex items-center justify-center">
+                    {% if producto.url_imagen %}
+                        <img
+                            src="{{ producto.url_imagen.url }}"
+                            alt="{{ producto.nombre_comun }}"
+                            loading="lazy"
+                            class="w-full h-full object-cover"
+                        >
+                    {% else %}
+                        <div class="flex flex-col items-center justify-center text-[#2D6A4F]/60 p-6" aria-hidden="true">
+                            <svg class="w-14 h-14" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M24 40V20" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+                                <path d="M24 26C16.5 26 11 20.5 11 13C18.5 13 24 18.5 24 26Z" fill="#D8F3DC" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                                <path d="M24 21C24 13.5 29.5 8 37 8C37 15.5 31.5 21 24 21Z" fill="#D8F3DC" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                                <path d="M16 40H32" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+                            </svg>
+                            <span class="mt-2 text-xs text-[#52606D]">Sin fotografía</span>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="p-4 flex-1 flex flex-col">
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+                        {% if producto.es_fijo %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#FEF3C7] text-[#92400E]">
+                                Todo el año
+                            </span>
+                        {% elif producto.id_temporada %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#D8F3DC] text-[#1B4332]">
+                                {{ producto.id_temporada.nombre }}
+                            </span>
+                        {% endif %}
+
+                        {% if producto.stock_actual > 0 %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#D8F3DC]/60 text-[#1B4332]">
+                                Disponible
+                            </span>
+                        {% else %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#FEF2F2] text-[#991B1B] border border-[#FECACA]">
+                                Agotado
+                            </span>
+                        {% endif %}
+                    </div>
+
+                    <h2 class="text-base font-semibold text-[#1F2933] leading-snug">
+                        {{ producto.nombre_comun }}
+                    </h2>
+
+                    {% if producto.nombre_cientifico %}
+                        <p class="text-xs italic text-[#52606D] mt-0.5">
+                            {{ producto.nombre_cientifico }}
+                        </p>
+                    {% endif %}
+
+                    <p class="text-sm text-[#52606D] mt-2.5 flex-1 leading-relaxed">
+                        {% if producto.descripcion_cuidados %}
+                            {{ producto.descripcion_cuidados|truncatechars:140 }}
+                        {% else %}
+                            Consulta en mesón por recomendaciones de riego, luz y sustrato.
+                        {% endif %}
+                    </p>
+
+                    <div class="pt-3 mt-4 border-t border-[#E2E8E4] flex items-baseline justify-between gap-2">
+                        <span class="text-xs text-[#52606D]">Precio unitario</span>
+                        <span class="text-lg font-bold text-[#1B4332]">
+                            {{ producto.precio_unitario|clp }}
+                        </span>
+                    </div>
+                </div>
+            </article>
+        {% endfor %}
+    </section>
+{% else %}
+    <section class="bg-white border border-[#E2E8E4] rounded-xl p-10 text-center">
+        <p class="text-base font-medium text-[#1F2933]">
+            No encontramos especies que coincidan con tu búsqueda.
+        </p>
+        <p class="text-sm text-[#52606D] mt-1">
+            Prueba con otro nombre o selecciona "Todas" las temporadas para ver el catálogo completo.
+        </p>
+        <a
+            href="{% url 'core:catalogo' %}"
+            class="mt-4 min-h-[44px] inline-flex items-center px-5 rounded-lg bg-[#1B4332] hover:bg-[#2D6A4F] text-white text-sm font-medium transition-colors"
+        >
+            Ver ciclo actual
+        </a>
+    </section>
+{% endif %}
+{% endblock %}

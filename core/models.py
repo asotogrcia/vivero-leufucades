@@ -2,6 +2,8 @@ from django.conf import settings
 from django.db import models
 from django.db.models import CheckConstraint, Q
 
+from services.media_webp import optimizar_imagen_webp
+
 
 class Temporada(models.Model):
     id_temporada = models.AutoField(primary_key=True)
@@ -60,6 +62,16 @@ class Producto(models.Model):
     @property
     def es_stock_critico(self) -> bool:
         return self.stock_actual <= self.stock_minimo
+
+    def save(self, *args, **kwargs):
+        update_fields = kwargs.get('update_fields')
+        if (
+            self.url_imagen
+            and not self.url_imagen._committed
+            and (update_fields is None or 'url_imagen' in update_fields)
+        ):
+            self.url_imagen = optimizar_imagen_webp(self.url_imagen)
+        super().save(*args, **kwargs)
 
     def __str__(self) -> str:
         return f'[{self.sku}] {self.nombre_comun} (${self.precio_unitario:,})'

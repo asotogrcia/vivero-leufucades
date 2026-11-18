@@ -1,12 +1,19 @@
+import io
+import tempfile
 import uuid
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser, Group
 from django.contrib.sessions.middleware import SessionMiddleware
+from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.http import HttpResponse
 from django.middleware.csrf import CsrfViewMiddleware
-from django.test import RequestFactory, TestCase
+from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
+from PIL import Image
+
+from services.media_webp import MAX_PESO_BYTES, optimizar_imagen_webp
 
 from core.decorators import (
     GRUPO_ADMINISTRADORA,
@@ -275,3 +282,162 @@ class AuthAndDashboardViewsTests(TestCase):
         self.assertIn('/temporadas/', html)
         self.assertIn('/inventario/auditoria/', html)
         self.assertIn('/reportes/', html)
+
+
+class MediaWebPTests(TestCase):
+    def _crear_imagen_bytes(self, size=(1200, 900), mode='RGB', fmt='PNG') -> io.BytesIO:
+        buf = io.BytesIO()
+        img = Image.new(mode, size, color=(34, 139, 34))
+        img.save(buf, format=fmt)
+        buf.seek(0)
+        return buf
+
+    def test_optimizar_imagen_webp_redimensiona_y_convierte_a_webp(self):
+        archivo = SimpleUploadedFile(
+            'planta.png',
+            self._crear_imagen_bytes(size=(1600, 1200), mode='RGBA', fmt='PNG').read(),
+            content_type='image/png',
+        )
+        resultado = optimizar_imagen_webp(archivo)
+
+        self.assertTrue(resultado.name.endswith('.webp'))
+        self.assertLessEqual(resultado.size, MAX_PESO_BYTES)
+
+        with Image.open(io.BytesIO(resultado.read())) as img_out:
+            self.assertEqual(img_out.format, 'WEBP')
+            self.assertEqual(img_out.width, 800)
+            self.assertEqual(img_out.height, 600)
+
+    def test_optimizar_imagen_webp_rechaza_archivo_no_valido(self):
+        archivo_falso = SimpleUploadedFile(
+            'malicioso.jpg',
+            b'esto no es una imagen real',
+            content_type='image/jpeg',
+        )
+        with self.assertRaises(ValidationError):
+            optimizar_imagen_webp(archivo_falso)
+
+    def test_producto_save_optimiza_imagen_nueva_y_no_reprocesa_al_actualizar_stock(self):
+        with tempfile.TemporaryDirectory() as tmp_media:
+            with override_settings(MEDIA_ROOT=tmp_media):
+                archivo = SimpleUploadedFile(
+                    'copihue.png',
+                    self._crear_imagen_bytes(size=(1000, 500), fmt='PNG').read(),
+                    content_type='image/png',
+                )
+                producto = Producto.objects.create(
+                    sku='VIV-IMG-01',
+                    nombre_comun='Copihue Prueba',
+                    precio_unitario=9900,
+                    stock_actual=10,
+                    url_imagen=archivo,
+                )
+                nombre_guardado = producto.url_imagen.name
+                self.assertTrue(nombre_guardado.endswith('.webp'))
+
+                producto.stock_actual = 8
+                producto.save()
+                producto.refresh_from_db()
+                self.assertEqual(producto.url_imagen.name, nombre_guardado)
+
+
+class CatalogoPublicoTests(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.primavera = Temporada.objects.create(nombre='Primavera', es_activa=True)
+        self.invierno = Temporada.objects.create(nombre='Invierno', es_activa=False)
+
+        self.prod_primavera = Producto.objects.create(
+            sku='CAT-001',
+            id_temporada=self.primavera,
+            nombre_comun='Hortensia Azul',
+            nombre_cientifico='Hydrangea macrophylla',
+            precio_unitario=7500,
+            stock_actual=14,
+            es_fijo=False,
+            descripcion_cuidados='Semisombra y riego moderado.',
+            activo=True,
+        )
+        self.prod_fijo = Producto.objects.create(
+            sku='CAT-002',
+            id_temporada=self.invierno,
+            nombre_comun='Tierra de Hoja 25L',
+            nombre_cientifico='',
+            precio_unitario=4500,
+            stock_actual=0,
+            es_fijo=True,
+            activo=True,
+        )
+        self.prod_invierno = Producto.objects.create(
+            sku='CAT-003',
+            id_temporada=self.invierno,
+            nombre_comun='Camelia Blanca',
+            nombre_cientifico='Camellia japonica',
+            precio_unitario=12900,
+            stock_actual=6,
+            es_fijo=False,
+            activo=True,
+        )
+        self.prod_inactivo = Producto.objects.create(
+            sku='CAT-004',
+            id_temporada=self.primavera,
+            nombre_comun='Producto Oculto',
+            precio_unitario=3000,
+            stock_actual=5,
+            es_fijo=True,
+            activo=False,
+        )
+
+    def _get_catalogo(self, params=None):
+        from core.views.catalogo import CatalogoListView
+
+        req = self.factory.get(reverse('core:catalogo'), params or {})
+        req.user = AnonymousUser()
+        resp = CatalogoListView.as_view()(req)
+        if hasattr(resp, 'render'):
+            resp.render()
+        return resp
+
+    def test_catalogo_publico_sin_login_filtra_ciclo_actual_y_fijos(self):
+        resp = self._get_catalogo()
+        self.assertEqual(resp.status_code, 200)
+        html = resp.content.decode('utf-8')
+
+        self.assertIn('Ciclo Activo: Primavera', html)
+        self.assertIn('Hortensia Azul', html)
+        self.assertIn('Hydrangea macrophylla', html)
+        self.assertIn('Tierra de Hoja 25L', html)
+        self.assertIn('$7.500', html)
+        self.assertIn('Disponible', html)
+        self.assertIn('Agotado', html)
+        self.assertNotIn('14', html.split('Hortensia Azul')[1][:150])
+        self.assertNotIn('Camelia Blanca', html)
+        self.assertNotIn('Producto Oculto', html)
+
+    def test_catalogo_filtros_temporada_y_busqueda(self):
+        resp_fijos = self._get_catalogo({'temporada': 'fijos'})
+        html_fijos = resp_fijos.content.decode('utf-8')
+        self.assertIn('Tierra de Hoja 25L', html_fijos)
+        self.assertNotIn('Hortensia Azul', html_fijos)
+
+        resp_inv = self._get_catalogo({'temporada': str(self.invierno.id_temporada)})
+        html_inv = resp_inv.content.decode('utf-8')
+        self.assertIn('Camelia Blanca', html_inv)
+        self.assertNotIn('Hortensia Azul', html_inv)
+
+        resp_todas = self._get_catalogo({'temporada': 'todas'})
+        html_todas = resp_todas.content.decode('utf-8')
+        self.assertIn('Hortensia Azul', html_todas)
+        self.assertIn('Camelia Blanca', html_todas)
+        self.assertIn('Tierra de Hoja 25L', html_todas)
+        self.assertNotIn('Producto Oculto', html_todas)
+
+        resp_q = self._get_catalogo({'temporada': 'todas', 'q': 'Camellia'})
+        html_q = resp_q.content.decode('utf-8')
+        self.assertIn('Camelia Blanca', html_q)
+        self.assertNotIn('Hortensia Azul', html_q)
+
+        resp_sku = self._get_catalogo({'q': 'CAT-001'})
+        html_sku = resp_sku.content.decode('utf-8')
+        self.assertIn('Hortensia Azul', html_sku)
+        self.assertNotIn('Tierra de Hoja 25L', html_sku)
