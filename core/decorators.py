@@ -1,9 +1,19 @@
 from functools import wraps
 
-from django.http import HttpResponseForbidden
+from django.shortcuts import render
 
 GRUPO_ADMINISTRADORA = 'Administradora General'
 GRUPO_OPERADOR = 'Operador de Mesón'
+
+
+def render_403(request, mensaje: str = ''):
+    """Renderiza la vista personalizada HTTP 403 con diseño Botánico Minimalista."""
+    return render(
+        request,
+        '403.html',
+        {'mensaje': mensaje},
+        status=403,
+    )
 
 
 def usuario_es_administradora(user) -> bool:
@@ -28,8 +38,9 @@ def requiere_administradora(view_func):
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
         if not usuario_es_administradora(request.user):
-            return HttpResponseForbidden(
-                'Acceso denegado: Se requiere perfil de Administradora General.'
+            return render_403(
+                request,
+                mensaje='Acceso denegado: Se requiere perfil de Administradora General.',
             )
         return view_func(request, *args, **kwargs)
 
@@ -42,9 +53,12 @@ def requiere_operador_o_admin(view_func):
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
         if not usuario_es_operador_o_admin(request.user):
-            return HttpResponseForbidden(
-                'Acceso denegado: Se requiere perfil de Administradora General '
-                'o Operador de Mesón.'
+            return render_403(
+                request,
+                mensaje=(
+                    'Acceso denegado: Se requiere perfil de Administradora General '
+                    'o Operador de Mesón.'
+                ),
             )
         return view_func(request, *args, **kwargs)
 

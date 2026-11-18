@@ -279,6 +279,12 @@ class AuthAndDashboardViewsTests(TestCase):
         self.assertIn('Ajuste #8', html)
         self.assertNotIn('Ajuste #1', html)
 
+        self.assertIn('Operación Diaria', html)
+        self.assertIn('/ventas/pos/', html)
+        self.assertNotIn('Catálogo e Inventario', html)
+        self.assertNotIn('Control de Inventario', html)
+        self.assertNotIn('Control y Finanzas', html)
+        self.assertNotIn('href="/inventario/"', html)
         self.assertNotIn('/inventario/nuevo/', html)
         self.assertNotIn('/inventario/maestros/', html)
         self.assertNotIn('/inventario/auditoria/', html)
@@ -1204,20 +1210,61 @@ class AuditoriaQAXPTests(TestCase):
         self.assertNotIn('Especie Desactivada', html)
 
     def test_hu02_rbac_bloqueo_operador_en_reportes_y_auditoria(self):
-        self.assertTrue(
-            self.client.login(username='operador_qa', password='Password123!')
+        from django.core.exceptions import PermissionDenied
+
+        from config.urls import handler403
+
+        # Anónimo recibe 403 con base_publico.html
+        resp_anon = self._get_vista('/inventario/', AnonymousUser())
+        self.assertEqual(resp_anon.status_code, 403)
+        html_anon = resp_anon.content.decode('utf-8')
+        self.assertIn('Error 403 · Acceso Restringido', html_anon)
+        self.assertIn('Iniciar Sesión', html_anon)
+        self.assertIn('Volver al Catálogo Público', html_anon)
+        self.assertNotIn('id="panel-sidebar"', html_anon)
+
+        resp_inventario = self._get_vista('/inventario/', self.operador_user)
+        self.assertEqual(resp_inventario.status_code, 403)
+        html_inv = resp_inventario.content.decode('utf-8')
+        self.assertIn('id="panel-sidebar"', html_inv)
+        self.assertIn('Error 403 · Acceso Restringido', html_inv)
+        self.assertIn(
+            'Tu perfil de Operador de Mesón no tiene permisos para gestionar el inventario maestro, auditoría o reportes contables.',
+            html_inv,
         )
+        self.assertIn('href="/ventas/pos/"', html_inv)
+        self.assertIn('Ir al Punto de Venta (POS)', html_inv)
+        self.assertIn('href="/panel/"', html_inv)
+        self.assertIn('Volver al Resumen Operativo', html_inv)
+        self.assertNotIn('Catálogo e Inventario', html_inv)
+        self.assertNotIn('Control y Finanzas', html_inv)
 
-        resp_reportes = self.client.get('/reportes/')
+        resp_reportes = self._get_vista('/reportes/', self.operador_user)
         self.assertEqual(resp_reportes.status_code, 403)
+        self.assertIn('Error 403 · Acceso Restringido', resp_reportes.content.decode('utf-8'))
 
-        resp_auditoria = self.client.get('/inventario/auditoria/')
+        resp_auditoria = self._get_vista('/inventario/auditoria/', self.operador_user)
         self.assertEqual(resp_auditoria.status_code, 403)
+        self.assertIn('Error 403 · Acceso Restringido', resp_auditoria.content.decode('utf-8'))
 
-        resp_crear = self.client.get('/inventario/crear/')
+        resp_crear = self._get_vista('/inventario/crear/', self.operador_user)
         self.assertEqual(resp_crear.status_code, 403)
+        self.assertIn('Error 403 · Acceso Restringido', resp_crear.content.decode('utf-8'))
 
-        self.client.logout()
+        # Verificar handler403 en DEBUG=True y DEBUG=False ante PermissionDenied
+        for debug_flag in (True, False):
+            with override_settings(DEBUG=debug_flag):
+                req_403 = _attach_session(self.factory.get('/inventario/'))
+                req_403.user = self.operador_user
+                resp_handler = handler403(
+                    req_403,
+                    exception=PermissionDenied('Se requiere perfil de Administradora General.'),
+                )
+                self.assertEqual(resp_handler.status_code, 403)
+                html_handler = resp_handler.content.decode('utf-8')
+                self.assertIn('Error 403 · Acceso Restringido', html_handler)
+                self.assertIn('Se requiere perfil de Administradora General.', html_handler)
+
         self.assertEqual(self._get_vista('/reportes/', self.admin_user).status_code, 200)
         self.assertEqual(
             self._get_vista('/inventario/auditoria/', self.admin_user).status_code,

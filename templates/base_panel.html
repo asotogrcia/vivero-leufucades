@@ -108,6 +108,7 @@
                         </div>
                     </div>
 
+                    {% if es_administradora %}
                     <div>
                         <p class="px-3 pb-1.5 text-xs uppercase tracking-wider text-[#95D5B2]/80 font-semibold">
                             Catálogo e Inventario
@@ -130,7 +131,6 @@
                                 {% endif %}
                             </a>
 
-                            {% if es_administradora %}
                             <a
                                 href="/inventario/nuevo/"
                                 class="min-h-[44px] flex items-center gap-2.5 px-3 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-[#D8F3DC] {% if request.path == '/inventario/nuevo/' or request.path == '/inventario/crear/' %}bg-[#2D6A4F] text-white font-medium border-l-4 border-[#D8F3DC]{% else %}text-[#D8F3DC] hover:bg-[#2D6A4F]/70 hover:text-white{% endif %}"
@@ -150,9 +150,9 @@
                                 </svg>
                                 <span>Ciclos y Temporadas</span>
                             </a>
-                            {% endif %}
                         </div>
                     </div>
+                    {% endif %}
 
                     {% if es_administradora %}
                     <div>

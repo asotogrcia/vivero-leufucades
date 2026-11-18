@@ -20,6 +20,8 @@ from django.contrib import admin
 from django.http import JsonResponse
 from django.urls import include, path
 
+from core.views.errors import error_403_view
+
 
 def healthz(request):
     return JsonResponse({'status': 'ok', 'service': 'vivero-leufucades'})
@@ -30,6 +32,8 @@ urlpatterns = [
     path('healthz/', healthz, name='healthz'),
     path('', include('core.urls')),
 ]
+
+handler403 = error_403_view
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
