@@ -116,6 +116,15 @@
             </header>
 
             <main class="flex-1 p-6">
+                {% if messages %}
+                <div class="mb-5 space-y-2" aria-live="polite">
+                    {% for message in messages %}
+                    <div class="rounded-xl px-4 py-3 text-sm font-medium border {% if message.tags == 'error' %}bg-[#FEF2F2] border-[#FECACA] text-[#991B1B]{% else %}bg-[#D8F3DC] border-[#B7E4C7] text-[#1B4332]{% endif %}">
+                        {{ message }}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
                 {% block content %}{% endblock %}
             </main>
         </div>

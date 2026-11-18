@@ -9,7 +9,8 @@ from core.models import Temporada
 
 def panel_context(request):
     """Expone datos de rol RBAC y temporada activa para las plantillas del panel."""
-    if not request.path.startswith('/panel'):
+    rutas_panel = ('/panel', '/inventario', '/pos', '/temporadas', '/reportes')
+    if not request.path.startswith(rutas_panel):
         return {}
 
     user = getattr(request, 'user', None)

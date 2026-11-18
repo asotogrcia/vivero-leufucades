@@ -1,0 +1,129 @@
+{% extends "base_panel.html" %}
+
+{% block title %}Bitácora de Auditoría de Stock — Vivero Leufucades{% endblock %}
+
+{% block page_title %}Bitácora Inmutable de Auditoría{% endblock %}
+{% block page_subtitle %}
+<p class="text-xs text-[#52606D] mt-0.5">Registro histórico de solo lectura de cada variación de stock.</p>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-5">
+    <div class="bg-white border border-[#E2E8E4] rounded-xl p-4 flex flex-wrap items-center justify-between gap-4">
+        <form method="get" action="{% url 'core:inventario_auditoria' %}" class="flex flex-wrap items-center gap-2.5 flex-1">
+            <label for="buscar-auditoria" class="sr-only">Buscar en auditoría</label>
+            <input
+                id="buscar-auditoria"
+                type="search"
+                name="q"
+                value="{{ query }}"
+                placeholder="Filtrar por SKU, especie, usuario o motivo..."
+                class="flex-1 min-w-[220px] min-h-[44px] px-3.5 rounded-lg border border-[#E2E8E4] bg-[#F9FAF8] text-sm text-[#1F2933] focus:outline-none focus:ring-2 focus:ring-[#2D6A4F]"
+            >
+            <button
+                type="submit"
+                class="min-h-[44px] px-4 rounded-lg bg-[#1B4332] hover:bg-[#2D6A4F] text-white text-sm font-medium transition-colors"
+            >
+                Filtrar
+            </button>
+            {% if query %}
+            <a
+                href="{% url 'core:inventario_auditoria' %}"
+                class="min-h-[44px] inline-flex items-center px-3 rounded-lg text-sm text-[#52606D] hover:text-[#1F2933]"
+            >
+                Limpiar
+            </a>
+            {% endif %}
+        </form>
+
+        <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-[#D8F3DC] text-[#1B4332]">
+            Solo Lectura (Inmutable)
+        </span>
+    </div>
+
+    <div class="bg-white border border-[#E2E8E4] rounded-xl overflow-hidden">
+        {% if auditorias %}
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+                <thead class="bg-[#F9FAF8] border-b border-[#E2E8E4] text-xs uppercase text-[#52606D]">
+                    <tr>
+                        <th class="px-4 py-3 font-semibold">Folio</th>
+                        <th class="px-4 py-3 font-semibold">Fecha y Hora</th>
+                        <th class="px-4 py-3 font-semibold">SKU / Especie</th>
+                        <th class="px-4 py-3 font-semibold">Responsable</th>
+                        <th class="px-4 py-3 font-semibold text-right">Variación</th>
+                        <th class="px-4 py-3 font-semibold">Motivo</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-[#E2E8E4]">
+                    {% for aud in auditorias %}
+                    <tr class="hover:bg-[#F9FAF8]">
+                        <td class="px-4 py-3 font-mono text-xs text-[#52606D] whitespace-nowrap">
+                            #{{ aud.id_auditoria }}
+                        </td>
+                        <td class="px-4 py-3 text-xs text-[#52606D] whitespace-nowrap">
+                            {{ aud.fecha_hora|date:"d/m/Y H:i" }}
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="font-mono text-xs text-[#52606D] mr-1">{{ aud.id_producto.sku }}</span>
+                            <span class="font-medium text-[#1F2933]">{{ aud.id_producto.nombre_comun }}</span>
+                        </td>
+                        <td class="px-4 py-3 text-[#52606D]">
+                            {{ aud.id_usuario.username }}
+                        </td>
+                        <td class="px-4 py-3 text-right font-mono text-xs whitespace-nowrap">
+                            <span class="text-[#52606D]">{{ aud.stock_anterior }}</span>
+                            &rarr;
+                            <span class="font-semibold text-[#1F2933]">{{ aud.stock_nuevo }}</span>
+                            {% if aud.diferencial > 0 %}
+                            <span class="ml-1 inline-flex items-center px-2 py-0.5 rounded-full bg-[#D8F3DC] text-[#1B4332] font-semibold">
+                                (+{{ aud.diferencial }})
+                            </span>
+                            {% elif aud.diferencial < 0 %}
+                            <span class="ml-1 inline-flex items-center px-2 py-0.5 rounded-full bg-[#FEF2F2] text-[#991B1B] font-semibold">
+                                ({{ aud.diferencial }})
+                            </span>
+                            {% else %}
+                            <span class="ml-1 text-[#52606D]">(0)</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-[#1F2933]">
+                            {{ aud.motivo_ajuste }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if is_paginated %}
+        <div class="px-4 py-3 border-t border-[#E2E8E4] bg-[#F9FAF8] flex flex-wrap items-center justify-between gap-3 text-xs text-[#52606D]">
+            <span>Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+            <div class="flex items-center gap-2">
+                {% if page_obj.has_previous %}
+                <a
+                    href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query|urlencode }}{% endif %}"
+                    class="min-h-[44px] inline-flex items-center px-3 rounded-lg border border-[#E2E8E4] bg-white hover:bg-[#F9FAF8] text-[#1F2933] font-medium"
+                >
+                    Anterior
+                </a>
+                {% endif %}
+                {% if page_obj.has_next %}
+                <a
+                    href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query|urlencode }}{% endif %}"
+                    class="min-h-[44px] inline-flex items-center px-3 rounded-lg border border-[#E2E8E4] bg-white hover:bg-[#F9FAF8] text-[#1F2933] font-medium"
+                >
+                    Siguiente
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="px-6 py-10 text-center text-sm text-[#52606D]">
+            No existen registros de auditoría para mostrar.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

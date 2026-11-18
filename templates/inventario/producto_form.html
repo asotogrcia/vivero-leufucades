@@ -1,0 +1,160 @@
+{% extends "base_panel.html" %}
+
+{% block title %}{% if modo == 'editar' %}Editar Especie{% else %}Nueva Especie{% endif %} — Vivero Leufucades{% endblock %}
+
+{% block page_title %}
+{% if modo == 'editar' %}Editar Especie: {{ producto.nombre_comun }}{% else %}Nueva Especie / Producto{% endif %}
+{% endblock %}
+{% block page_subtitle %}
+<p class="text-xs text-[#52606D] mt-0.5">
+    Las fotografías subidas se optimizan automáticamente a formato WebP (&le; 120 KB).
+</p>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl bg-white border border-[#E2E8E4] rounded-xl p-6">
+    {% if form.non_field_errors %}
+    <div class="mb-5 rounded-xl bg-[#FEF2F2] border border-[#FECACA] text-[#991B1B] px-4 py-3 text-sm">
+        {% for error in form.non_field_errors %}
+        <p>{{ error }}</p>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" class="space-y-5">
+        {% csrf_token %}
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label for="{{ form.sku.id_for_label }}" class="block text-xs font-semibold text-[#52606D] mb-1">
+                    {{ form.sku.label }} *
+                </label>
+                {{ form.sku }}
+                {% for error in form.sku.errors %}
+                <p class="mt-1 text-xs text-[#991B1B]">{{ error }}</p>
+                {% endfor %}
+            </div>
+
+            <div>
+                <label for="{{ form.id_temporada.id_for_label }}" class="block text-xs font-semibold text-[#52606D] mb-1">
+                    {{ form.id_temporada.label }}
+                </label>
+                {{ form.id_temporada }}
+                {% for error in form.id_temporada.errors %}
+                <p class="mt-1 text-xs text-[#991B1B]">{{ error }}</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label for="{{ form.nombre_comun.id_for_label }}" class="block text-xs font-semibold text-[#52606D] mb-1">
+                    {{ form.nombre_comun.label }} *
+                </label>
+                {{ form.nombre_comun }}
+                {% for error in form.nombre_comun.errors %}
+                <p class="mt-1 text-xs text-[#991B1B]">{{ error }}</p>
+                {% endfor %}
+            </div>
+
+            <div>
+                <label for="{{ form.nombre_cientifico.id_for_label }}" class="block text-xs font-semibold text-[#52606D] mb-1">
+                    {{ form.nombre_cientifico.label }}
+                </label>
+                {{ form.nombre_cientifico }}
+                {% for error in form.nombre_cientifico.errors %}
+                <p class="mt-1 text-xs text-[#991B1B]">{{ error }}</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="flex items-center gap-3 p-3.5 rounded-lg bg-[#F9FAF8] border border-[#E2E8E4]">
+            {{ form.es_fijo }}
+            <label for="{{ form.es_fijo.id_for_label }}" class="text-sm font-medium text-[#1F2933] cursor-pointer">
+                {{ form.es_fijo.label }}
+                <span class="block text-xs font-normal text-[#52606D]">
+                    Si se marca, la especie estará visible todo el año y no debe asociarse a una temporada específica.
+                </span>
+            </label>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label for="{{ form.precio_unitario.id_for_label }}" class="block text-xs font-semibold text-[#52606D] mb-1">
+                    {{ form.precio_unitario.label }} *
+                </label>
+                {{ form.precio_unitario }}
+                {% for error in form.precio_unitario.errors %}
+                <p class="mt-1 text-xs text-[#991B1B]">{{ error }}</p>
+                {% endfor %}
+            </div>
+
+            <div>
+                <label for="{{ form.stock_actual.id_for_label }}" class="block text-xs font-semibold text-[#52606D] mb-1">
+                    {{ form.stock_actual.label }} *
+                </label>
+                {{ form.stock_actual }}
+                {% for error in form.stock_actual.errors %}
+                <p class="mt-1 text-xs text-[#991B1B]">{{ error }}</p>
+                {% endfor %}
+            </div>
+
+            <div>
+                <label for="{{ form.stock_minimo.id_for_label }}" class="block text-xs font-semibold text-[#52606D] mb-1">
+                    {{ form.stock_minimo.label }} *
+                </label>
+                {{ form.stock_minimo }}
+                {% for error in form.stock_minimo.errors %}
+                <p class="mt-1 text-xs text-[#991B1B]">{{ error }}</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div>
+            <label for="{{ form.descripcion_cuidados.id_for_label }}" class="block text-xs font-semibold text-[#52606D] mb-1">
+                {{ form.descripcion_cuidados.label }}
+            </label>
+            {{ form.descripcion_cuidados }}
+            {% for error in form.descripcion_cuidados.errors %}
+            <p class="mt-1 text-xs text-[#991B1B]">{{ error }}</p>
+            {% endfor %}
+        </div>
+
+        <div>
+            <label for="{{ form.url_imagen.id_for_label }}" class="block text-xs font-semibold text-[#52606D] mb-1">
+                {{ form.url_imagen.label }}
+            </label>
+            {% if producto and producto.url_imagen %}
+            <div class="mb-2 flex items-center gap-3">
+                <img
+                    src="{{ producto.url_imagen.url }}"
+                    alt="{{ producto.nombre_comun }}"
+                    loading="lazy"
+                    class="w-16 h-16 rounded-lg object-cover border border-[#E2E8E4]"
+                >
+                <span class="text-xs text-[#52606D]">Imagen actual en formato WebP</span>
+            </div>
+            {% endif %}
+            {{ form.url_imagen }}
+            {% for error in form.url_imagen.errors %}
+            <p class="mt-1 text-xs text-[#991B1B]">{{ error }}</p>
+            {% endfor %}
+        </div>
+
+        <div class="pt-3 border-t border-[#E2E8E4] flex flex-wrap items-center justify-end gap-3">
+            <a
+                href="{% url 'core:inventario_list' %}"
+                class="min-h-[44px] inline-flex items-center px-4 rounded-lg border border-[#E2E8E4] bg-white hover:bg-[#F9FAF8] text-sm font-medium text-[#52606D]"
+            >
+                Cancelar
+            </a>
+            <button
+                type="submit"
+                class="min-h-[44px] px-6 rounded-lg bg-[#1B4332] hover:bg-[#2D6A4F] text-white text-sm font-medium transition-colors"
+            >
+                {% if modo == 'editar' %}Guardar Cambios{% else %}Registrar Especie{% endif %}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
