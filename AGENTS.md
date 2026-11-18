@@ -1,7 +1,7 @@
 # AGENTS.md — Constitución Técnica: Sistema Web Vivero Leufucades
 
 ## 1. Identidad del Proyecto y Contexto Operativo
-- **Sistema:** Plataforma web centralizada de gestión de inventario estacional, punto de venta presencial en mesón (POS interno) y catálogo comercial público para **Vivero Leufucades** (Región de Los Ríos, Chile).
+- **Sistema:** Plataforma web centralizada de gestión de inventario estacional (hortalizas, almácigos y plantines), punto de venta presencial en mesón (POS interno) y catálogo comercial público Mobile-First para **Vivero Leufucades** (Región de Los Ríos, Chile).
 - **Restricción Crítica de Entorno:** El vivero opera en zona semirrural conectada vía enlace satelital **Starlink** (latencia 35–75 ms, susceptible a microcortes climáticos) y un computador de escritorio en mesón (Full HD `1920x1080`) respaldado por UPS.
 - **Metodología:** eXtreme Programming (XP). Código limpio, diseño simple, sin sobreingeniería, pruebas unitarias obligatorias por cada historia de usuario (`HU-01` a `HU-08`).
 
@@ -9,11 +9,11 @@
 - **Lenguaje:** Python 3.12+ (estricto cumplimiento de PEP 8).
 - **Framework Web:** Django 5.x bajo patrón **MVT + Capa de Servicios (`services/`)**.
   - Las vistas (`views.py`) **NUNCA** contienen lógica de negocio pesada, cálculos tributarios ni consultas complejas directas; solo validan formularios/permisos y delegan a `services/`.
-- **Base de Datos:** PostgreSQL 16 (3FN) en producción/pruebas. En desarrollo local inicial puede usarse PostgreSQL local vía `DATABASE_URL`.
-- **Frontend:** Django Template Language (DTL) con **Server-Side Rendering (SSR)**, HTML5 semántico, Tailwind CSS (vía CDN minificado o build local ligero) y JavaScript Vanilla mínimo (`< 15 KB`).
+- **Base de Datos:** PostgreSQL 16 (3FN) en producción vía **Neon Serverless Postgres** (`DATABASE_URL` con `conn_max_age=600` y `conn_health_checks=True`). En desarrollo local puede usarse SQLite o PostgreSQL local si `DATABASE_URL` está vacío.
+- **Frontend:** Django Template Language (DTL) con **Server-Side Rendering (SSR)**, HTML5 semántico, Tailwind CSS y JavaScript Vanilla modular (`< 15 KB`).
   - **PROHIBIDO:** React, Vue, Angular, Next.js o APIs REST innecesarias que dupliquen viajes de red sobre Starlink.
 - **Procesamiento:** `Pillow` (compresión `.webp`) y `openpyxl` (reportes `.xlsx` en RAM).
-- **Despliegue:** Render Cloud (PaaS Web Service + Managed PostgreSQL + Persistent Disk en `/var/data/media`).
+- **Despliegue y Almacenamiento Cloud:** **Render Cloud** (PaaS Web Service con Gunicorn + WhiteNoise), **Neon** (DBaaS PostgreSQL 16) y **Cloudinary** (Cloud Object Storage & CDN para imágenes `.webp` persistentes).
 
 ## 3. Reglas de Negocio Inquebrantables (Contratos de Dominio)
 1. **Cálculo Tributario Chileno (Decreto Ley N.º 825 — IVA 19%):**
@@ -46,13 +46,13 @@
 - **Paleta Exacta:**
   - Fondo de pantalla (`bg-canvas`): `#F9FAF8`
   - Tarjetas y contenedores (`bg-surface`): `#FFFFFF` con borde `1px solid #E2E8E4`
-  - Color Primario (Sidebar, botones principales, encabezados): `#1B4332` (Verde Bosque Profundo)
+  - Color Primario (Sidebar fijo de viewport, botones principales, encabezados): `#1B4332` (Verde Bosque Profundo)
   - Hover Primario: `#2D6A4F` (Verde Hoja)
   - Badge Temporada Activa / Acento suave: Fondo `#D8F3DC`, Texto `#1B4332`
   - Badge Producto Permanente (`es_fijo`): Fondo `#FEF3C7`, Texto `#92400E` (Ámbar tierra suave)
   - Texto Principal: `#1F2933` | Texto Secundario: `#52606D`
   - Alerta Stock Crítico (`<= 5`): Fondo `#FEF2F2`, Borde `#FECACA`, Texto `#991B1B`
-- **Ergonomía de Mesón (POS):** Inputs y botones de acción con altura mínima de `44px`, tipografía legible (`Inter` o sistema sans-serif, base `15px–16px`), foco visible para operación rápida con teclado (`Tab` / `Enter`) y microcopy directo en español chileno sin tecnicismos.
+- **Ergonomía y Responsividad:** Catálogo público diseñado bajo enfoque **Mobile-First** con Skeleton Loaders; panel interno con sidebar fijo en alto de pantalla (`h-screen`) y scroll independiente en el área principal; botones con altura mínima de `44px` y navegación por teclado (`Tab` / `Enter`).
 
 ## 5. Seguridad (OWASP ASVS y Ley 21.719)
 - Roles estrictos mediante `django.contrib.auth.models.Group`:
@@ -60,3 +60,8 @@
   2. `Operador de Mesón`: Acceso restringido solo a Dashboard básico, Consulta de Stock y Punto de Venta (`POS`). Cualquier intento de acceso por URL a `/inventario/crear/`, `/inventario/auditoria/` o `/reportes/` debe retornar **HTTP 403 Forbidden**.
 - Todos los formularios `POST` exigen `{% csrf_token %}`.
 - El catálogo público es 100% anónimo (minimización de datos Ley N.º 21.719).
+
+## 6. Rendimiento, Assets Estáticos y Despliegue Seguro (Producción)
+- **Separación Estricta de Assets (`static/`):** Ningún archivo `.html` en `templates/` debe contener bloques `<style>` ni `<script>` extensos inline. Todo estilo personalizado reside en `static/css/botanico.css` y toda lógica cliente en `static/js/` (`catalogo.js`, `pos.js`, `panel.js`), cargados mediante `{% static '...' %}` con atributo `defer` para aprovechar la caché inmutable de **WhiteNoise** (`CompressedManifestStaticFilesStorage`).
+- **Compresión y Optimización de Consultas:** `django.middleware.gzip.GZipMiddleware` debe ubicarse como primer middleware para comprimir las respuestas SSR. Toda consulta en vistas debe usar `select_related()`, `prefetch_related()` o `.only()` para eliminar consultas $N+1$ y reducir el tráfico con Neon PostgreSQL.
+- **Despliegue Idempotente (`build.sh`):** El script de construcción en Render ejecuta exclusivamente `pip install -r requirements.txt`, `python manage.py collectstatic --noinput` y `python manage.py migrate`. **PROHIBIDO** ejecutar `seed_vivero` de forma automática durante los despliegues en producción para proteger la integridad de los datos históricos.
