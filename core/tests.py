@@ -34,6 +34,15 @@ from core.views.auth_panel import (
 
 User = get_user_model()
 
+LOCAL_MEDIA_STORAGES = {
+    'default': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {
+        'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
+    },
+}
+
 
 def _attach_session(request):
     middleware = SessionMiddleware(lambda req: HttpResponse())
@@ -323,7 +332,7 @@ class MediaWebPTests(TestCase):
 
     def test_producto_save_optimiza_imagen_nueva_y_no_reprocesa_al_actualizar_stock(self):
         with tempfile.TemporaryDirectory() as tmp_media:
-            with override_settings(MEDIA_ROOT=tmp_media):
+            with override_settings(MEDIA_ROOT=tmp_media, STORAGES=LOCAL_MEDIA_STORAGES):
                 archivo = SimpleUploadedFile(
                     'copihue.png',
                     self._crear_imagen_bytes(size=(1000, 500), fmt='PNG').read(),
@@ -469,7 +478,7 @@ class InventarioServicesAndFormsTests(TestCase):
         from services.inventario import crear_o_actualizar_producto
 
         with tempfile.TemporaryDirectory() as tmp_media:
-            with override_settings(MEDIA_ROOT=tmp_media):
+            with override_settings(MEDIA_ROOT=tmp_media, STORAGES=LOCAL_MEDIA_STORAGES):
                 producto = crear_o_actualizar_producto(
                     datos={
                         'sku': 'VIV-100',
@@ -1211,7 +1220,7 @@ class AuditoriaQAXPTests(TestCase):
             self.client.login(username='admin_qa', password='Password123!')
         )
         with tempfile.TemporaryDirectory() as tmp_media:
-            with override_settings(MEDIA_ROOT=tmp_media):
+            with override_settings(MEDIA_ROOT=tmp_media, STORAGES=LOCAL_MEDIA_STORAGES):
                 imagen_jpg = SimpleUploadedFile(
                     'foto_vivero.jpg',
                     self._crear_jpg_bytes(size=(1600, 1200)),
