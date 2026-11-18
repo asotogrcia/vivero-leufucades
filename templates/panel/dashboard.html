@@ -1,0 +1,188 @@
+{% extends "base_panel.html" %}
+{% load vivero_extras %}
+
+{% block title %}Dashboard Operacional — Vivero Leufucades{% endblock %}
+
+{% block page_title %}Dashboard Operacional{% endblock %}
+{% block page_subtitle %}
+<p class="text-xs text-[#52606D] mt-0.5">Resumen del {{ fecha_hoy|date:"d/m/Y" }} (Hora Chile Continental)</p>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    {% if resumen_productos.total_stock_critico > 0 %}
+    <div role="alert" class="rounded-xl bg-[#FEF2F2] border border-[#FECACA] text-[#991B1B] px-5 py-4 flex flex-wrap items-center justify-between gap-4">
+        <div>
+            <p class="font-semibold text-base">
+                Alerta de Stock Crítico: {{ resumen_productos.total_stock_critico }}
+                {% if resumen_productos.total_stock_critico == 1 %}especie{% else %}especies{% endif %}
+                con stock igual o inferior al mínimo
+                {% if resumen_productos.total_agotadas > 0 %}
+                ({{ resumen_productos.total_agotadas }} agotada{{ resumen_productos.total_agotadas|pluralize }})
+                {% endif %}.
+            </p>
+            <p class="text-sm mt-0.5">
+                Revisa el detalle inferior para planificar reposición de mesón.
+            </p>
+        </div>
+        {% if es_administradora %}
+        <a
+            href="/inventario/"
+            class="min-h-[44px] inline-flex items-center px-4 rounded-lg bg-[#991B1B] hover:bg-[#7F1D1D] text-white text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[#991B1B]"
+        >
+            Reponer Stock
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <section aria-label="Indicadores del día" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white border border-[#E2E8E4] rounded-xl p-5">
+            <p class="text-xs font-semibold uppercase tracking-wider text-[#52606D]">Ventas de Hoy ($CLP)</p>
+            <p class="mt-2 text-2xl font-bold text-[#1B4332]">{{ ventas_hoy.total_clp|clp }}</p>
+            <p class="mt-1 text-xs text-[#52606D]">
+                {{ ventas_hoy.cantidad_ventas }}
+                {% if ventas_hoy.cantidad_ventas == 1 %}venta registrada{% else %}ventas registradas{% endif %}
+            </p>
+        </div>
+
+        <div class="bg-white border border-[#E2E8E4] rounded-xl p-5">
+            <p class="text-xs font-semibold uppercase tracking-wider text-[#52606D]">Especies Activas</p>
+            <p class="mt-2 text-2xl font-bold text-[#1F2933]">{{ resumen_productos.total_especies_activas }}</p>
+            <p class="mt-1 text-xs text-[#52606D]">Disponibles en catálogo activo</p>
+        </div>
+
+        <div class="rounded-xl p-5 border {% if resumen_productos.total_stock_critico > 0 %}bg-[#FEF2F2] border-[#FECACA] text-[#991B1B]{% else %}bg-white border-[#E2E8E4] text-[#1F2933]{% endif %}">
+            <p class="text-xs font-semibold uppercase tracking-wider {% if resumen_productos.total_stock_critico > 0 %}text-[#991B1B]{% else %}text-[#52606D]{% endif %}">
+                Stock Crítico (&le; 5 un.)
+            </p>
+            <p class="mt-2 text-2xl font-bold">{{ resumen_productos.total_stock_critico }}</p>
+            <p class="mt-1 text-xs {% if resumen_productos.total_stock_critico > 0 %}text-[#991B1B]/90{% else %}text-[#52606D]{% endif %}">
+                Especies bajo o en umbral mínimo
+            </p>
+        </div>
+
+        <div class="bg-white border border-[#E2E8E4] rounded-xl p-5">
+            <p class="text-xs font-semibold uppercase tracking-wider text-[#52606D]">Especies Agotadas</p>
+            <p class="mt-2 text-2xl font-bold {% if resumen_productos.total_agotadas > 0 %}text-[#991B1B]{% else %}text-[#1F2933]{% endif %}">
+                {{ resumen_productos.total_agotadas }}
+            </p>
+            <p class="mt-1 text-xs text-[#52606D]">Stock actual igual a 0 unidades</p>
+        </div>
+    </section>
+
+    {% if productos_criticos %}
+    <section aria-label="Especies con stock crítico" class="rounded-xl bg-[#FEF2F2] border border-[#FECACA] text-[#991B1B] overflow-hidden">
+        <div class="px-5 py-4 border-b border-[#FECACA] flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h2 class="text-base font-semibold">Especies con Stock Crítico</h2>
+                <p class="text-xs text-[#991B1B]/90">Productos activos con stock actual menor o igual a su stock mínimo.</p>
+            </div>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+                <thead class="bg-[#FEE2E2] text-xs uppercase text-[#991B1B]">
+                    <tr>
+                        <th class="px-5 py-3 font-semibold">SKU</th>
+                        <th class="px-5 py-3 font-semibold">Especie / Producto</th>
+                        <th class="px-5 py-3 font-semibold text-right">Stock Actual</th>
+                        <th class="px-5 py-3 font-semibold text-right">Mínimo</th>
+                        {% if es_administradora %}
+                        <th class="px-5 py-3 font-semibold text-right">Acción</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-[#FECACA]">
+                    {% for prod in productos_criticos %}
+                    <tr class="hover:bg-[#FEE2E2]/50">
+                        <td class="px-5 py-3 font-mono text-xs">{{ prod.sku }}</td>
+                        <td class="px-5 py-3 font-medium">
+                            {{ prod.nombre_comun }}
+                            {% if prod.es_fijo %}
+                            <span class="ml-1.5 inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#FEF3C7] text-[#92400E]">
+                                Permanente
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-5 py-3 text-right font-bold">
+                            {% if prod.stock_actual == 0 %}
+                            0 (Agotado)
+                            {% else %}
+                            {{ prod.stock_actual }} un.
+                            {% endif %}
+                        </td>
+                        <td class="px-5 py-3 text-right">{{ prod.stock_minimo }} un.</td>
+                        {% if es_administradora %}
+                        <td class="px-5 py-3 text-right">
+                            <a
+                                href="/inventario/"
+                                class="inline-flex items-center min-h-[44px] px-3 rounded-lg bg-[#991B1B] hover:bg-[#7F1D1D] text-white text-xs font-medium transition-colors"
+                            >
+                                Reponer stock
+                            </a>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+    {% endif %}
+
+    <section aria-label="Últimos movimientos de stock" class="bg-white border border-[#E2E8E4] rounded-xl overflow-hidden">
+        <div class="px-5 py-4 border-b border-[#E2E8E4] flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h2 class="text-base font-semibold text-[#1F2933]">Últimos Movimientos de Inventario</h2>
+                <p class="text-xs text-[#52606D]">Últimos 6 registros de la bitácora inmutable de stock.</p>
+            </div>
+            {% if es_administradora %}
+            <a
+                href="/inventario/auditoria/"
+                class="min-h-[44px] inline-flex items-center px-3.5 rounded-lg border border-[#E2E8E4] hover:bg-[#F9FAF8] text-xs font-medium text-[#1B4332] transition-colors"
+            >
+                Ver bitácora completa
+            </a>
+            {% endif %}
+        </div>
+
+        {% if ultimas_auditorias %}
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+                <thead class="bg-[#F9FAF8] text-xs uppercase text-[#52606D] border-b border-[#E2E8E4]">
+                    <tr>
+                        <th class="px-5 py-3 font-semibold">Fecha y Hora</th>
+                        <th class="px-5 py-3 font-semibold">Producto</th>
+                        <th class="px-5 py-3 font-semibold">Responsable</th>
+                        <th class="px-5 py-3 font-semibold text-right">Cambio</th>
+                        <th class="px-5 py-3 font-semibold">Motivo</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-[#E2E8E4]">
+                    {% for aud in ultimas_auditorias %}
+                    <tr class="hover:bg-[#F9FAF8]">
+                        <td class="px-5 py-3 text-xs text-[#52606D] whitespace-nowrap">
+                            {{ aud.fecha_hora|date:"d/m/Y H:i" }}
+                        </td>
+                        <td class="px-5 py-3 font-medium text-[#1F2933]">
+                            <span class="font-mono text-xs text-[#52606D]">{{ aud.id_producto.sku }}</span>
+                            {{ aud.id_producto.nombre_comun }}
+                        </td>
+                        <td class="px-5 py-3 text-[#52606D]">{{ aud.id_usuario.username }}</td>
+                        <td class="px-5 py-3 text-right font-mono text-xs whitespace-nowrap">
+                            {{ aud.stock_anterior }} &rarr; <span class="font-semibold text-[#1B4332]">{{ aud.stock_nuevo }}</span>
+                        </td>
+                        <td class="px-5 py-3 text-[#52606D]">{{ aud.motivo_ajuste }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="px-5 py-8 text-center text-sm text-[#52606D]">
+            Aún no hay movimientos registrados en la bitácora de inventario.
+        </div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

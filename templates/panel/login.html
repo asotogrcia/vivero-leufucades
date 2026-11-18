@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso Vivero — Vivero Leufucades</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-[#F9FAF8] text-[#1F2933] text-[15px] antialiased flex items-center justify-center p-4">
+    <main class="w-full max-w-md bg-white border border-[#E2E8E4] rounded-xl p-6 sm:p-8 shadow-sm">
+        <div class="text-center mb-6">
+            <span class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-[#1B4332] text-[#D8F3DC] font-semibold text-lg mb-3">
+                VL
+            </span>
+            <h1 class="text-xl font-semibold text-[#1B4332]">Vivero Leufucades</h1>
+            <p class="text-sm text-[#52606D] mt-1">Ingreso al panel interno y punto de venta</p>
+        </div>
+
+        {% if error_message %}
+        <div role="alert" class="mb-5 rounded-lg bg-[#FEF2F2] border border-[#FECACA] text-[#991B1B] px-4 py-3 text-sm font-medium">
+            {{ error_message }}
+        </div>
+        {% endif %}
+
+        <form method="post" action="{% url 'core:login' %}" class="space-y-4">
+            {% csrf_token %}
+            {% if next %}
+            <input type="hidden" name="next" value="{{ next }}">
+            {% endif %}
+
+            <div>
+                <label for="id_username" class="block text-sm font-medium text-[#1F2933] mb-1.5">
+                    Usuario
+                </label>
+                <input
+                    id="id_username"
+                    name="username"
+                    type="text"
+                    required
+                    autofocus
+                    autocomplete="username"
+                    value="{{ username_value|default:'' }}"
+                    placeholder="Ej. operador_meson"
+                    class="w-full min-h-[44px] px-3.5 rounded-lg border border-[#E2E8E4] bg-white text-[#1F2933] placeholder-[#52606D]/70 focus:outline-none focus:ring-2 focus:ring-[#2D6A4F]"
+                >
+            </div>
+
+            <div>
+                <label for="id_password" class="block text-sm font-medium text-[#1F2933] mb-1.5">
+                    Contraseña
+                </label>
+                <input
+                    id="id_password"
+                    name="password"
+                    type="password"
+                    required
+                    autocomplete="current-password"
+                    placeholder="Ingresa tu contraseña"
+                    class="w-full min-h-[44px] px-3.5 rounded-lg border border-[#E2E8E4] bg-white text-[#1F2933] placeholder-[#52606D]/70 focus:outline-none focus:ring-2 focus:ring-[#2D6A4F]"
+                >
+            </div>
+
+            <button
+                type="submit"
+                class="w-full min-h-[44px] px-4 rounded-lg bg-[#1B4332] hover:bg-[#2D6A4F] text-white font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[#2D6A4F] focus:ring-offset-2"
+            >
+                Ingresar al Panel
+            </button>
+        </form>
+
+        <div class="mt-6 pt-4 border-t border-[#E2E8E4] text-center">
+            <a
+                href="/"
+                class="inline-flex items-center min-h-[44px] px-3 text-sm text-[#52606D] hover:text-[#1B4332] font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[#2D6A4F] rounded-md"
+            >
+                ← Volver al catálogo público
+            </a>
+        </div>
+    </main>
+</body>
+</html>
