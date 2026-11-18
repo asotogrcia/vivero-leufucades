@@ -189,9 +189,8 @@
                 </p>
                 {% endif %}
 
-                {% with pildoras=producto.descripcion_cuidados|pildoras_horticolas %}
                 <div class="mt-3 flex flex-wrap gap-1.5 flex-1 content-start">
-                    {% for pildora in pildoras %}
+                    {% for pildora in producto.descripcion_cuidados|pildoras_horticolas %}
                     <span
                         class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] bg-[#F9FAF8] border border-[#E2E8E4] text-[#52606D]">
                         {% if pildora.tipo == 'riego' %}
@@ -235,13 +234,12 @@
                     data-disponible="{% if producto.stock_actual > 0 %}1{% else %}0{% endif %}"
                     data-precio="{{ producto.precio_unitario|clp }}"
                     data-cuidados="{{ producto.descripcion_cuidados|default:'Consulta en mesón por recomendaciones de riego, luz solar y trasplante.' }}"
-                    data-imagen="{% if producto.url_imagen %}{{ producto.url_imagen.url }}{% endif %}" {% for p in
-                    pildoras %}{% if p.tipo=='riego' %} data-riego="{{ p.valor }}" {% elif p.tipo=='luz' %}
-                    data-luz="{{ p.valor }}" {% endif %}{% endfor %}
+                    data-imagen="{% if producto.url_imagen %}{{ producto.url_imagen.url }}{% endif %}"
+                    data-riego="{{ producto.descripcion_cuidados|pildora_valor:'riego' }}"
+                    data-luz="{{ producto.descripcion_cuidados|pildora_valor:'luz' }}"
                     class="mt-3 w-full min-h-[44px] px-3.5 rounded-lg border border-[#E2E8E4] bg-[#F9FAF8] hover:bg-[#D8F3DC] text-[#1B4332] text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[#2D6A4F]">
                     Ver detalles de cultivo
                 </button>
-                {% endwith %}
             </div>
         </article>
         {% endfor %}

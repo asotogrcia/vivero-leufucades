@@ -57,3 +57,12 @@ def pildoras_horticolas(descripcion: str) -> list[dict]:
         ]
 
     return pildoras
+
+
+@register.filter
+def pildora_valor(descripcion: str, tipo: str) -> str:
+    """Retorna el valor extraído para un tipo específico ('riego', 'luz', etc.)."""
+    for pildora in pildoras_horticolas(descripcion):
+        if pildora['tipo'] == tipo:
+            return pildora['valor']
+    return ''
