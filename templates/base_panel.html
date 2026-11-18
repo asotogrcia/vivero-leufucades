@@ -74,7 +74,7 @@
                         </a>
                         <a
                             href="/reportes/"
-                            class="min-h-[44px] flex items-center px-3.5 rounded-lg text-sm font-medium text-[#D8F3DC] hover:bg-[#2D6A4F] hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-[#D8F3DC]"
+                            class="min-h-[44px] flex items-center px-3.5 rounded-lg text-sm font-medium transition-colors {% if request.path|slice:':10' == '/reportes/' %}bg-[#2D6A4F] text-white{% else %}text-[#D8F3DC] hover:bg-[#2D6A4F] hover:text-white{% endif %} focus:outline-none focus:ring-2 focus:ring-[#D8F3DC]"
                         >
                             Reportes Excel
                         </a>

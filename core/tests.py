@@ -1,12 +1,16 @@
 import io
 import tempfile
 import uuid
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
+import openpyxl
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser, Group
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import IntegrityError, transaction
 from django.http import HttpResponse
 from django.middleware.csrf import CsrfViewMiddleware
 from django.test import RequestFactory, TestCase, override_settings
@@ -1059,4 +1063,479 @@ class VentasPOSServiceAndViewsTests(TestCase):
         self.assertIn('$1.597', html_comp)
         self.assertIn('window.print()', html_comp)
         self.assertIn('Nueva Venta', html_comp)
+
+
+class AuditoriaQAXPTests(TestCase):
+    """Suite obligatoria XP/BDD (HU-01 a HU-08) exigida por el skill auditoria-qa-xp."""
+
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.grupo_admin = Group.objects.create(name=GRUPO_ADMINISTRADORA)
+        self.grupo_operador = Group.objects.create(name=GRUPO_OPERADOR)
+
+        self.admin_user = User.objects.create_user(
+            username='admin_qa',
+            password='Password123!',
+            first_name='Elena',
+            last_name='Vargas',
+        )
+        self.admin_user.groups.add(self.grupo_admin)
+
+        self.operador_user = User.objects.create_user(
+            username='operador_qa',
+            password='Password123!',
+            first_name='Tomás',
+            last_name='Muñoz',
+        )
+        self.operador_user.groups.add(self.grupo_operador)
+
+        self.primavera = Temporada.objects.create(nombre='Primavera', es_activa=True)
+        self.verano = Temporada.objects.create(nombre='Verano', es_activa=False)
+
+    def _get_vista(self, path: str, user, data=None):
+        """Resuelve la ruta real y ejecuta la vista con sesión (compatible Python 3.12-3.14)."""
+        from django.contrib.messages.middleware import MessageMiddleware
+        from django.urls import resolve
+
+        match = resolve(path)
+        req = self.factory.get(path, data or {})
+        _attach_session(req)
+        MessageMiddleware(lambda r: HttpResponse()).process_request(req)
+        req.user = user
+        resp = match.func(req, *match.args, **match.kwargs)
+        if hasattr(resp, 'render'):
+            resp.render()
+        return resp
+
+    def _crear_jpg_bytes(self, size=(1200, 900)) -> bytes:
+        buf = io.BytesIO()
+        Image.new('RGB', size, color=(27, 67, 50)).save(buf, format='JPEG', quality=95)
+        buf.seek(0)
+        return buf.read()
+
+    def test_hu01_catalogo_publico_estacional_y_fijos(self):
+        Producto.objects.create(
+            sku='HU01-PRIM',
+            id_temporada=self.primavera,
+            nombre_comun='Copihue de Primavera',
+            precio_unitario=12500,
+            stock_actual=8,
+            es_fijo=False,
+            activo=True,
+        )
+        Producto.objects.create(
+            sku='HU01-FIJO',
+            id_temporada=None,
+            nombre_comun='Sustrato Nativo 25L',
+            precio_unitario=4900,
+            stock_actual=15,
+            es_fijo=True,
+            activo=True,
+        )
+        Producto.objects.create(
+            sku='HU01-VER',
+            id_temporada=self.verano,
+            nombre_comun='Girasol de Verano',
+            precio_unitario=3500,
+            stock_actual=10,
+            es_fijo=False,
+            activo=True,
+        )
+        Producto.objects.create(
+            sku='HU01-INACT',
+            id_temporada=self.primavera,
+            nombre_comun='Especie Desactivada',
+            precio_unitario=6000,
+            stock_actual=5,
+            es_fijo=True,
+            activo=False,
+        )
+
+        resp = self._get_vista('/', AnonymousUser())
+        self.assertEqual(resp.status_code, 200)
+        html = resp.content.decode('utf-8')
+        self.assertIn('Copihue de Primavera', html)
+        self.assertIn('Sustrato Nativo 25L', html)
+        self.assertNotIn('Girasol de Verano', html)
+        self.assertNotIn('Especie Desactivada', html)
+
+    def test_hu02_rbac_bloqueo_operador_en_reportes_y_auditoria(self):
+        self.assertTrue(
+            self.client.login(username='operador_qa', password='Password123!')
+        )
+
+        resp_reportes = self.client.get('/reportes/')
+        self.assertEqual(resp_reportes.status_code, 403)
+
+        resp_auditoria = self.client.get('/inventario/auditoria/')
+        self.assertEqual(resp_auditoria.status_code, 403)
+
+        resp_crear = self.client.get('/inventario/crear/')
+        self.assertEqual(resp_crear.status_code, 403)
+
+        self.client.logout()
+        self.assertEqual(self._get_vista('/reportes/', self.admin_user).status_code, 200)
+        self.assertEqual(
+            self._get_vista('/inventario/auditoria/', self.admin_user).status_code,
+            200,
+        )
+
+    def test_hu03_inventario_rechaza_stock_negativo_y_convierte_webp(self):
+        from core.forms import ProductoForm
+
+        form_negativo = ProductoForm(
+            data={
+                'sku': 'HU03-NEG',
+                'nombre_comun': 'Arrayán Blanco',
+                'precio_unitario': 7500,
+                'stock_actual': -3,
+                'stock_minimo': 5,
+                'es_fijo': False,
+                'id_temporada': self.primavera.id_temporada,
+            }
+        )
+        self.assertFalse(form_negativo.is_valid())
+        self.assertIn('stock_actual', form_negativo.errors)
+
+        with self.assertRaises((IntegrityError, ValidationError)):
+            with transaction.atomic():
+                Producto.objects.create(
+                    sku='HU03-DB-NEG',
+                    id_temporada=self.primavera,
+                    nombre_comun='Prueba DB Negativa',
+                    precio_unitario=5000,
+                    stock_actual=-1,
+                )
+
+        self.assertTrue(
+            self.client.login(username='admin_qa', password='Password123!')
+        )
+        with tempfile.TemporaryDirectory() as tmp_media:
+            with override_settings(MEDIA_ROOT=tmp_media):
+                imagen_jpg = SimpleUploadedFile(
+                    'foto_vivero.jpg',
+                    self._crear_jpg_bytes(size=(1600, 1200)),
+                    content_type='image/jpeg',
+                )
+                resp = self.client.post(
+                    '/inventario/crear/',
+                    {
+                        'sku': 'HU03-WEBP',
+                        'nombre_comun': 'Maqui Patagónico',
+                        'nombre_cientifico': 'Aristotelia chilensis',
+                        'id_temporada': self.primavera.id_temporada,
+                        'precio_unitario': 9800,
+                        'stock_actual': 10,
+                        'stock_minimo': 5,
+                        'descripcion_cuidados': 'Semisombra.',
+                        'url_imagen': imagen_jpg,
+                    },
+                )
+                self.assertEqual(resp.status_code, 302)
+                producto = Producto.objects.get(sku='HU03-WEBP')
+                self.assertTrue(producto.url_imagen.name.endswith('.webp'))
+                self.assertLessEqual(producto.url_imagen.size, MAX_PESO_BYTES)
+                with Image.open(producto.url_imagen.path) as img_webp:
+                    self.assertEqual(img_webp.format, 'WEBP')
+                    self.assertLessEqual(img_webp.width, 800)
+
+    def test_hu04_venta_calculo_iva_dl825_e_idempotencia(self):
+        prod = Producto.objects.create(
+            sku='HU04-001',
+            id_temporada=self.primavera,
+            nombre_comun='Helecho Nativo',
+            precio_unitario=5000,
+            stock_actual=10,
+            stock_minimo=5,
+            activo=True,
+        )
+        self.assertTrue(
+            self.client.login(username='operador_qa', password='Password123!')
+        )
+
+        idem_key = str(uuid.uuid4())
+        payload = {
+            'idempotency_key': idem_key,
+            'metodo_pago': Venta.METODO_EFECTIVO,
+            'items_json': f'[{{"id_producto": {prod.id_producto}, "cantidad": 1}}]',
+        }
+
+        resp1 = self.client.post('/ventas/pos/', payload)
+        self.assertEqual(resp1.status_code, 302)
+
+        venta = Venta.objects.get(idempotency_key=idem_key)
+        self.assertEqual(venta.total_bruto, 5000)
+        self.assertEqual(venta.total_neto, 4202)
+        self.assertEqual(venta.monto_iva, 798)
+        self.assertEqual(resp1.url, f'/ventas/comprobante/{venta.id_venta}/')
+
+        prod.refresh_from_db()
+        self.assertEqual(prod.stock_actual, 9)
+
+        # Reenvío idempotente con el mismo UUID no debe descontar stock ni duplicar venta
+        resp2 = self.client.post('/ventas/pos/', payload)
+        self.assertEqual(resp2.status_code, 302)
+        self.assertEqual(resp2.url, f'/ventas/comprobante/{venta.id_venta}/')
+        prod.refresh_from_db()
+        self.assertEqual(prod.stock_actual, 9)
+        self.assertEqual(Venta.objects.filter(idempotency_key=idem_key).count(), 1)
+
+    def test_hu05_alerta_stock_critico_frontera(self):
+        from services.transaccion import registrar_venta_meson
+
+        prod = Producto.objects.create(
+            sku='HU05-001',
+            id_temporada=self.primavera,
+            nombre_comun='Maitén del Sur',
+            precio_unitario=6500,
+            stock_actual=6,
+            stock_minimo=5,
+            activo=True,
+        )
+        self.assertFalse(prod.es_stock_critico)
+
+        html_sin_alerta = self._get_vista(
+            '/panel/',
+            self.operador_user,
+        ).content.decode('utf-8')
+        self.assertNotIn('Alerta de Stock Crítico', html_sin_alerta)
+
+        # Rebajar 1 unidad: stock queda en 5 (umbral crítico <= 5)
+        registrar_venta_meson(
+            usuario=self.operador_user,
+            items=[{'id_producto': prod.id_producto, 'cantidad': 1}],
+            metodo_pago=Venta.METODO_EFECTIVO,
+            idempotency_key=uuid.uuid4(),
+        )
+        prod.refresh_from_db()
+        self.assertEqual(prod.stock_actual, 5)
+        self.assertTrue(prod.es_stock_critico)
+
+        html_con_alerta = self._get_vista(
+            '/panel/',
+            self.operador_user,
+        ).content.decode('utf-8')
+        self.assertIn('Alerta de Stock Crítico', html_con_alerta)
+        self.assertIn('Maitén del Sur', html_con_alerta)
+
+        # Agotar las 5 unidades restantes
+        registrar_venta_meson(
+            usuario=self.operador_user,
+            items=[{'id_producto': prod.id_producto, 'cantidad': 5}],
+            metodo_pago=Venta.METODO_POS_TARJETA,
+            idempotency_key=uuid.uuid4(),
+        )
+        prod.refresh_from_db()
+        self.assertEqual(prod.stock_actual, 0)
+
+        # Con stock=0 debe bloquearse cualquier nueva venta
+        with self.assertRaises(ValidationError):
+            registrar_venta_meson(
+                usuario=self.operador_user,
+                items=[{'id_producto': prod.id_producto, 'cantidad': 1}],
+                metodo_pago=Venta.METODO_EFECTIVO,
+                idempotency_key=uuid.uuid4(),
+            )
+        prod.refresh_from_db()
+        self.assertEqual(prod.stock_actual, 0)
+
+    def test_hu06_exportacion_excel_valida(self):
+        tz_cl = ZoneInfo('America/Santiago')
+        usuario_formula = User.objects.create_user(
+            username='op_formula',
+            password='Password123!',
+            first_name='=SUM(1,1)',
+            last_name='Prueba',
+        )
+
+        # Venta 1: Noviembre 2026 (nombre con posible formula injection)
+        v1 = Venta.objects.create(
+            id_usuario=usuario_formula,
+            total_bruto=5000,
+            total_neto=4202,
+            monto_iva=798,
+            metodo_pago=Venta.METODO_EFECTIVO,
+            idempotency_key=uuid.uuid4(),
+        )
+        Venta.objects.filter(pk=v1.pk).update(
+            fecha_hora=datetime(2026, 11, 10, 15, 30, tzinfo=tz_cl)
+        )
+
+        # Venta 2: 30 de Noviembre 2026 22:30 America/Santiago (01:30 UTC del 1 de Dic)
+        v2 = Venta.objects.create(
+            id_usuario=self.operador_user,
+            total_bruto=11900,
+            total_neto=10000,
+            monto_iva=1900,
+            metodo_pago=Venta.METODO_TRANSFERENCIA,
+            idempotency_key=uuid.uuid4(),
+        )
+        Venta.objects.filter(pk=v2.pk).update(
+            fecha_hora=datetime(2026, 11, 30, 22, 30, tzinfo=tz_cl)
+        )
+
+        # Venta 3: Octubre 2026 (no debe entrar en filtro 11/2026, sí en histórico)
+        v3 = Venta.objects.create(
+            id_usuario=self.admin_user,
+            total_bruto=23800,
+            total_neto=20000,
+            monto_iva=3800,
+            metodo_pago=Venta.METODO_POS_TARJETA,
+            idempotency_key=uuid.uuid4(),
+        )
+        Venta.objects.filter(pk=v3.pk).update(
+            fecha_hora=datetime(2026, 10, 15, 11, 0, tzinfo=tz_cl)
+        )
+
+        self.assertTrue(
+            self.client.login(username='admin_qa', password='Password123!')
+        )
+
+        # Vista HTML del período Noviembre 2026
+        resp_html = self._get_vista(
+            '/reportes/',
+            self.admin_user,
+            {'mes': '11', 'anio': '2026'},
+        )
+        self.assertEqual(resp_html.status_code, 200)
+        html = resp_html.content.decode('utf-8')
+        self.assertIn('Noviembre 2026', html)
+        self.assertIn('$16.900', html)
+        self.assertIn('$14.202', html)
+        self.assertIn('$2.698', html)
+
+        # Descarga .xlsx filtrado por Noviembre 2026
+        resp_xlsx = self.client.get(
+            '/reportes/',
+            {'mes': '11', 'anio': '2026', 'descargar': '1'},
+        )
+        self.assertEqual(resp_xlsx.status_code, 200)
+        self.assertEqual(
+            resp_xlsx['Content-Type'],
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+        self.assertEqual(
+            resp_xlsx['Content-Disposition'],
+            'attachment; filename="Reporte_Ventas_Vivero_2026_11.xlsx"',
+        )
+
+        wb = openpyxl.load_workbook(io.BytesIO(resp_xlsx.content), data_only=True)
+        ws = wb['Ventas Vivero']
+
+        cabeceras = [ws.cell(row=4, column=c).value for c in range(1, 8)]
+        self.assertEqual(
+            cabeceras,
+            [
+                'Folio',
+                'Fecha y Hora',
+                'Operador',
+                'Método de Pago',
+                'Total Bruto ($CLP)',
+                'Base Neta ($CLP)',
+                'IVA 19% ($CLP)',
+            ],
+        )
+        self.assertTrue(ws.cell(row=4, column=1).fill.start_color.rgb.endswith('1B4332'))
+
+        # Sanitización contra formula injection en operador (fila 5)
+        operador_celda = str(ws.cell(row=5, column=3).value)
+        self.assertFalse(operador_celda.startswith(('=', '+', '-', '@')))
+        self.assertEqual(ws.cell(row=5, column=5).number_format, '$#,##0')
+
+        # Deben existir exactamente 2 filas de datos (filas 5 y 6) y totales en fila 7
+        self.assertEqual(ws.cell(row=5, column=5).value, 5000)
+        self.assertEqual(ws.cell(row=6, column=5).value, 11900)
+        self.assertEqual(ws.cell(row=7, column=1).value, 'TOTALES CONSOLIDADOS')
+        self.assertEqual(ws.cell(row=7, column=5).value, 16900)
+        self.assertEqual(ws.cell(row=7, column=6).value, 14202)
+        self.assertEqual(ws.cell(row=7, column=7).value, 2698)
+        self.assertTrue(ws.cell(row=7, column=1).fill.start_color.rgb.endswith('D8F3DC'))
+        self.assertTrue(ws.cell(row=7, column=1).font.bold)
+
+        # Descarga consolidada histórica ("todos")
+        resp_hist = self.client.get(
+            '/reportes/',
+            {'mes': 'todos', 'anio': 'todos', 'descargar': '1'},
+        )
+        self.assertEqual(resp_hist.status_code, 200)
+        self.assertEqual(
+            resp_hist['Content-Disposition'],
+            'attachment; filename="Reporte_Ventas_Vivero_Historico.xlsx"',
+        )
+        wb_hist = openpyxl.load_workbook(io.BytesIO(resp_hist.content), data_only=True)
+        ws_hist = wb_hist['Ventas Vivero']
+        self.assertEqual(ws_hist.cell(row=8, column=1).value, 'TOTALES CONSOLIDADOS')
+        self.assertEqual(ws_hist.cell(row=8, column=5).value, 40700)
+        self.assertEqual(ws_hist.cell(row=8, column=6).value, 34202)
+        self.assertEqual(ws_hist.cell(row=8, column=7).value, 6498)
+
+    def test_hu07_unicidad_temporada_activa(self):
+        self.assertTrue(
+            self.client.login(username='admin_qa', password='Password123!')
+        )
+        resp = self.client.post(
+            '/temporadas/',
+            {'action': 'activar', 'temporada_id': self.verano.id_temporada},
+        )
+        self.assertEqual(resp.status_code, 302)
+
+        self.primavera.refresh_from_db()
+        self.verano.refresh_from_db()
+        self.assertTrue(self.verano.es_activa)
+        self.assertFalse(self.primavera.es_activa)
+        self.assertEqual(Temporada.objects.filter(es_activa=True).count(), 1)
+
+    def test_hu08_auditoria_inmutable_se_registra_automaticamente(self):
+        from services.inventario import ajustar_stock_producto
+        from services.transaccion import registrar_venta_meson
+
+        prod = Producto.objects.create(
+            sku='HU08-001',
+            id_temporada=self.primavera,
+            nombre_comun='Avellano Chileno',
+            precio_unitario=14000,
+            stock_actual=10,
+            stock_minimo=5,
+            activo=True,
+        )
+
+        # 1. Auditoría por venta en mesón (-3 unidades)
+        venta = registrar_venta_meson(
+            usuario=self.operador_user,
+            items=[{'id_producto': prod.id_producto, 'cantidad': 3}],
+            metodo_pago=Venta.METODO_EFECTIVO,
+            idempotency_key=uuid.uuid4(),
+        )
+        aud_venta = AuditoriaStock.objects.get(
+            id_producto=prod,
+            id_usuario=self.operador_user,
+        )
+        self.assertEqual(aud_venta.stock_anterior, 10)
+        self.assertEqual(aud_venta.stock_nuevo, 7)
+        self.assertEqual(aud_venta.stock_nuevo - aud_venta.stock_anterior, -3)
+        self.assertIn(f'Venta #{venta.id_venta}', aud_venta.motivo_ajuste)
+
+        # 2. Auditoría por merma administrativa (-2 unidades)
+        aud_merma = ajustar_stock_producto(
+            producto_id=prod.id_producto,
+            usuario=self.admin_user,
+            tipo_movimiento='merma',
+            cantidad=2,
+            motivo='Hojas quemadas por sol',
+        )
+        self.assertEqual(aud_merma.id_usuario, self.admin_user)
+        self.assertEqual(aud_merma.stock_anterior, 7)
+        self.assertEqual(aud_merma.stock_nuevo, 5)
+        self.assertEqual(aud_merma.stock_nuevo - aud_merma.stock_anterior, -2)
+        self.assertIn('[Merma / Ajuste]', aud_merma.motivo_ajuste)
+
+        self.assertEqual(AuditoriaStock.objects.filter(id_producto=prod).count(), 2)
+
+        resp_aud = self._get_vista('/inventario/auditoria/', self.admin_user)
+        self.assertEqual(resp_aud.status_code, 200)
+        html_aud = resp_aud.content.decode('utf-8')
+        self.assertIn('HU08-001', html_aud)
+        self.assertIn('(-3)', html_aud)
+        self.assertIn('(-2)', html_aud)
+
 

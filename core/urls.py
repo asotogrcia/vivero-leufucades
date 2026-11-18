@@ -15,6 +15,7 @@ from core.views.inventario import (
     ProductoDesactivarView,
     ProductoUpdateView,
 )
+from core.views.reportes import ReporteExcelView
 from core.views.ventas import ComprobanteVentaView, VentaMesonView
 
 app_name = 'core'
@@ -64,4 +65,5 @@ urlpatterns = [
         AuditoriaListView.as_view(),
         name='inventario_auditoria',
     ),
+    path('reportes/', ReporteExcelView.as_view(), name='reportes'),
 ]
