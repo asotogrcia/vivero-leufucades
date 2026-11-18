@@ -41,3 +41,10 @@ Las imágenes de productos subidas a través de la aplicación se optimizan auto
 .\venv\Scripts\python.exe manage.py check
 .\venv\Scripts\python.exe manage.py test
 ```
+
+## Despliegue en Render (Producción)
+
+- **Build Command:** `./build.sh` (o `pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate`).
+- **Start Command:** `gunicorn config.wsgi:application`
+
+> **Nota sobre inicialización de datos:** El comando `python manage.py seed_vivero` es **exclusivamente manual** para la primera inicialización del entorno. No debe incluirse en `build.sh` ni ejecutarse automáticamente en despliegues para proteger la integridad de los datos históricos.

@@ -56,6 +56,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'django.middleware.gzip.GZipMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -95,6 +96,7 @@ DATABASES = {
     'default': dj_database_url.config(
         default='sqlite:///db.sqlite3',
         conn_max_age=600,
+        conn_health_checks=True,
     )
 }
 
@@ -151,7 +153,7 @@ STORAGES = {
         'BACKEND': 'django.core.files.storage.FileSystemStorage',
     },
     'staticfiles': {
-        'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
+        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
     },
 }
 
