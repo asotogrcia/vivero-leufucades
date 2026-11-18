@@ -858,3 +858,205 @@ class InventarioViewsRBACTests(TestCase):
         self.assertIn('INV-004', html_aud)
         self.assertIn('Traslado interno', html_aud)
         self.assertIn('(-2)', html_aud)
+
+
+class VentasPOSServiceAndViewsTests(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.grupo_admin = Group.objects.create(name=GRUPO_ADMINISTRADORA)
+        self.grupo_operador = Group.objects.create(name=GRUPO_OPERADOR)
+
+        self.admin_user = User.objects.create_user(
+            username='admin_pos',
+            password='Password123!',
+        )
+        self.admin_user.groups.add(self.grupo_admin)
+
+        self.operador_user = User.objects.create_user(
+            username='operador_pos',
+            password='Password123!',
+            first_name='Camila',
+            last_name='Ríos',
+        )
+        self.operador_user.groups.add(self.grupo_operador)
+
+        self.primavera = Temporada.objects.create(nombre='Primavera', es_activa=True)
+
+        self.prod_5000 = Producto.objects.create(
+            sku='POS-001',
+            id_temporada=self.primavera,
+            nombre_comun='Helecho Costilla de Vaca',
+            precio_unitario=5000,
+            stock_actual=6,
+            stock_minimo=5,
+            activo=True,
+        )
+        self.prod_8900 = Producto.objects.create(
+            sku='POS-002',
+            id_temporada=self.primavera,
+            nombre_comun='Arrayán de Valdivia',
+            precio_unitario=8900,
+            stock_actual=4,
+            stock_minimo=5,
+            activo=True,
+        )
+        self.prod_agotado = Producto.objects.create(
+            sku='POS-003',
+            id_temporada=self.primavera,
+            nombre_comun='Murtilla Austral',
+            precio_unitario=6500,
+            stock_actual=0,
+            stock_minimo=5,
+            activo=True,
+        )
+
+    def _call_view(self, view_func, method, path, user, data=None, **kwargs):
+        from django.contrib.messages.middleware import MessageMiddleware
+
+        if method == 'GET':
+            req = self.factory.get(path, data or {})
+        else:
+            req = self.factory.post(path, data or {})
+        _attach_session(req)
+        MessageMiddleware(lambda r: HttpResponse()).process_request(req)
+        req.user = user
+        resp = view_func(req, **kwargs)
+        if hasattr(resp, 'render'):
+            resp.render()
+        return resp
+
+    def test_hu04_venta_calculo_iva_dl825_idempotencia_y_auditoria(self):
+        from services.transaccion import registrar_venta_meson
+
+        idem_key = uuid.uuid4()
+        venta = registrar_venta_meson(
+            usuario=self.operador_user,
+            items=[{'id_producto': self.prod_5000.id_producto, 'cantidad': 1}],
+            metodo_pago=Venta.METODO_EFECTIVO,
+            idempotency_key=idem_key,
+        )
+
+        self.assertEqual(venta.total_bruto, 5000)
+        self.assertEqual(venta.total_neto, 4202)
+        self.assertEqual(venta.monto_iva, 798)
+        self.assertEqual(venta.total_neto + venta.monto_iva, venta.total_bruto)
+
+        self.prod_5000.refresh_from_db()
+        self.assertEqual(self.prod_5000.stock_actual, 5)
+        self.assertTrue(self.prod_5000.es_stock_critico)
+
+        # Congelamiento de precio histórico
+        self.prod_5000.precio_unitario = 7900
+        self.prod_5000.save(update_fields=['precio_unitario'])
+        detalle = venta.detalles.first()
+        self.assertEqual(detalle.precio_unit_hist, 5000)
+        self.assertEqual(detalle.subtotal, 5000)
+
+        # Auditoría inmutable creada
+        auditoria = AuditoriaStock.objects.get(id_producto=self.prod_5000)
+        self.assertEqual(auditoria.stock_anterior, 6)
+        self.assertEqual(auditoria.stock_nuevo, 5)
+        self.assertEqual(
+            auditoria.motivo_ajuste,
+            f'Venta #{venta.id_venta}: Venta mesón (Efectivo)',
+        )
+
+        # Reenvío con el mismo idempotency_key no descuenta stock de nuevo
+        venta_duplicada = registrar_venta_meson(
+            usuario=self.operador_user,
+            items=[{'id_producto': self.prod_5000.id_producto, 'cantidad': 1}],
+            metodo_pago=Venta.METODO_EFECTIVO,
+            idempotency_key=str(idem_key),
+        )
+        self.assertEqual(venta_duplicada.id_venta, venta.id_venta)
+        self.prod_5000.refresh_from_db()
+        self.assertEqual(self.prod_5000.stock_actual, 5)
+        self.assertEqual(Venta.objects.count(), 1)
+        self.assertEqual(AuditoriaStock.objects.count(), 1)
+
+    def test_registrar_venta_meson_rollback_ante_stock_insuficiente(self):
+        from services.transaccion import registrar_venta_meson
+
+        with self.assertRaises(ValidationError) as ctx:
+            registrar_venta_meson(
+                usuario=self.operador_user,
+                items=[
+                    {'id_producto': self.prod_5000.id_producto, 'cantidad': 2},
+                    {'id_producto': self.prod_8900.id_producto, 'cantidad': 10},
+                ],
+                metodo_pago=Venta.METODO_POS_TARJETA,
+                idempotency_key=uuid.uuid4(),
+            )
+
+        self.assertIn('Stock insuficiente para Arrayán de Valdivia', str(ctx.exception))
+        self.prod_5000.refresh_from_db()
+        self.prod_8900.refresh_from_db()
+        self.assertEqual(self.prod_5000.stock_actual, 6)
+        self.assertEqual(self.prod_8900.stock_actual, 4)
+        self.assertEqual(Venta.objects.count(), 0)
+        self.assertEqual(AuditoriaStock.objects.count(), 0)
+
+    def test_vistas_pos_y_comprobante_rbac_y_flujo_completo(self):
+        from core.views.ventas import ComprobanteVentaView, VentaMesonView
+
+        # Anónimo recibe 403
+        resp_anon = self._call_view(
+            VentaMesonView.as_view(),
+            'GET',
+            reverse('core:venta_meson'),
+            AnonymousUser(),
+        )
+        self.assertEqual(resp_anon.status_code, 403)
+
+        # GET POS como operador
+        resp_get = self._call_view(
+            VentaMesonView.as_view(),
+            'GET',
+            reverse('core:venta_meson'),
+            self.operador_user,
+        )
+        self.assertEqual(resp_get.status_code, 200)
+        html_pos = resp_get.content.decode('utf-8')
+        self.assertIn('Helecho Costilla de Vaca', html_pos)
+        self.assertIn('Murtilla Austral', html_pos)
+        self.assertIn('Sin Stock', html_pos)
+        self.assertIn('Confirmar Venta y Emitir Comprobante', html_pos)
+        self.assertIn('name="idempotency_key"', html_pos)
+
+        # POST exitoso redirige a comprobante
+        idem_post = str(uuid.uuid4())
+        resp_post = self._call_view(
+            VentaMesonView.as_view(),
+            'POST',
+            reverse('core:venta_meson'),
+            self.operador_user,
+            data={
+                'idempotency_key': idem_post,
+                'metodo_pago': Venta.METODO_TRANSFERENCIA,
+                'items_json': f'[{{"id_producto": {self.prod_5000.id_producto}, "cantidad": 2}}]',
+            },
+        )
+        self.assertEqual(resp_post.status_code, 302)
+        venta_creada = Venta.objects.get(idempotency_key=idem_post)
+        self.assertEqual(resp_post.url, f'/ventas/comprobante/{venta_creada.id_venta}/')
+
+        # GET Comprobante
+        resp_comp = self._call_view(
+            ComprobanteVentaView.as_view(),
+            'GET',
+            reverse('core:comprobante_venta', args=[venta_creada.id_venta]),
+            self.operador_user,
+            id_venta=venta_creada.id_venta,
+        )
+        self.assertEqual(resp_comp.status_code, 200)
+        html_comp = resp_comp.content.decode('utf-8')
+        self.assertIn(
+            'Comprobante de Control Interno — No Válido como Boleta Electrónica SII',
+            html_comp,
+        )
+        self.assertIn('$10.000', html_comp)
+        self.assertIn('$8.403', html_comp)
+        self.assertIn('$1.597', html_comp)
+        self.assertIn('window.print()', html_comp)
+        self.assertIn('Nueva Venta', html_comp)
+

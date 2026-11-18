@@ -1,0 +1,167 @@
+{% extends "base_panel.html" %}
+{% load vivero_extras %}
+
+{% block title %}Comprobante Venta #{{ venta.id_venta }} — Vivero Leufucades{% endblock %}
+
+{% block page_title %}Comprobante de Venta #{{ venta.id_venta }}{% endblock %}
+{% block page_subtitle %}
+<p class="text-xs text-[#52606D] mt-0.5">
+    Detalle de operación registrada en mesón — Folio Interno #{{ venta.id_venta }}
+</p>
+{% endblock %}
+
+{% block content %}
+<style>
+@media print {
+    aside, header, .no-print {
+        display: none !important;
+    }
+    body, main {
+        background: #FFFFFF !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    #comprobante-imprimible {
+        border: 1px solid #000000 !important;
+        box-shadow: none !important;
+        max-width: 100% !important;
+    }
+}
+</style>
+
+<div class="max-w-2xl mx-auto space-y-6">
+    <!-- Acciones superiores -->
+    <div class="no-print flex flex-wrap items-center justify-between gap-3">
+        <a
+            href="{% url 'core:venta_meson' %}"
+            class="min-h-[44px] inline-flex items-center px-4 rounded-lg bg-[#1B4332] hover:bg-[#2D6A4F] text-white text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-[#2D6A4F]"
+        >
+            + Nueva Venta
+        </a>
+        <button
+            type="button"
+            onclick="window.print()"
+            class="min-h-[44px] inline-flex items-center px-4 rounded-lg border border-[#E2E8E4] bg-white hover:bg-[#F9FAF8] text-[#1F2933] text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-[#1B4332]"
+        >
+            Imprimir Comprobante
+        </button>
+    </div>
+
+    <!-- Tarjeta tipo Comprobante de Caja -->
+    <article
+        id="comprobante-imprimible"
+        aria-label="Comprobante de venta"
+        class="bg-white border border-[#E2E8E4] rounded-xl overflow-hidden shadow-sm"
+    >
+        <!-- Encabezado del comprobante -->
+        <div class="bg-[#1B4332] text-white px-6 py-5 flex flex-wrap items-center justify-between gap-4">
+            <div>
+                <p class="text-xs uppercase tracking-wider text-[#D8F3DC] font-semibold">
+                    Vivero Leufucades — Región de Los Ríos
+                </p>
+                <h2 class="text-xl font-bold mt-0.5">Comprobante de Caja</h2>
+            </div>
+            <div class="text-right">
+                <span class="inline-block px-3 py-1 rounded-lg bg-[#2D6A4F] text-xs uppercase tracking-wider text-[#D8F3DC] font-semibold">
+                    Folio Interno
+                </span>
+                <p class="text-2xl font-mono font-bold mt-1">#{{ venta.id_venta }}</p>
+            </div>
+        </div>
+
+        <div class="p-6 space-y-6">
+            <!-- Metadatos de la transacción -->
+            <dl class="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-[#F9FAF8] border border-[#E2E8E4] rounded-xl p-4 text-sm">
+                <div>
+                    <dt class="text-xs font-semibold uppercase tracking-wider text-[#52606D]">Fecha y Hora</dt>
+                    <dd class="font-semibold text-[#1F2933] mt-1">{{ venta.fecha_hora|date:"d/m/Y H:i" }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs font-semibold uppercase tracking-wider text-[#52606D]">Operador de Mesón</dt>
+                    <dd class="font-semibold text-[#1F2933] mt-1">
+                        {{ venta.id_usuario.get_full_name|default:venta.id_usuario.username }}
+                    </dd>
+                </div>
+                <div>
+                    <dt class="text-xs font-semibold uppercase tracking-wider text-[#52606D]">Método de Pago</dt>
+                    <dd class="mt-1">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#D8F3DC] text-[#1B4332]">
+                            {{ venta.metodo_pago }}
+                        </span>
+                    </dd>
+                </div>
+            </dl>
+
+            <!-- Tabla de ítems vendidos -->
+            <div class="border border-[#E2E8E4] rounded-xl overflow-hidden">
+                <table class="w-full text-left text-sm">
+                    <thead class="bg-[#F9FAF8] text-xs uppercase text-[#52606D] border-b border-[#E2E8E4]">
+                        <tr>
+                            <th class="px-4 py-3 font-semibold">Cant.</th>
+                            <th class="px-4 py-3 font-semibold">Especie / SKU</th>
+                            <th class="px-4 py-3 font-semibold text-right">P. Unitario</th>
+                            <th class="px-4 py-3 font-semibold text-right">Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-[#E2E8E4]">
+                        {% for item in detalles %}
+                        <tr>
+                            <td class="px-4 py-3 font-bold text-[#1F2933]">{{ item.cantidad }}x</td>
+                            <td class="px-4 py-3">
+                                <span class="block font-medium text-[#1F2933]">{{ item.id_producto.nombre_comun }}</span>
+                                <span class="block font-mono text-xs text-[#52606D]">{{ item.id_producto.sku }}</span>
+                            </td>
+                            <td class="px-4 py-3 text-right text-[#52606D]">{{ item.precio_unit_hist|clp }}</td>
+                            <td class="px-4 py-3 text-right font-semibold text-[#1F2933]">{{ item.subtotal|clp }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Resumen Tributario DL 825 -->
+            <div class="bg-[#F9FAF8] border border-[#E2E8E4] rounded-xl p-5 space-y-2.5">
+                <div class="flex items-center justify-between text-sm text-[#52606D]">
+                    <span>Monto Neto (Base Imponible)</span>
+                    <span class="font-semibold text-[#1F2933]">{{ venta.total_neto|clp }}</span>
+                </div>
+                <div class="flex items-center justify-between text-sm text-[#52606D]">
+                    <span>IVA (19% DL 825)</span>
+                    <span class="font-semibold text-[#1F2933]">{{ venta.monto_iva|clp }}</span>
+                </div>
+                <div class="pt-3 border-t border-[#E2E8E4] flex items-center justify-between">
+                    <span class="text-base font-bold text-[#1F2933]">Total Pagado</span>
+                    <span class="text-2xl font-bold text-[#1B4332]">{{ venta.total_bruto|clp }}</span>
+                </div>
+            </div>
+
+            <!-- Leyenda obligatoria SII -->
+            <div class="rounded-xl bg-[#FEF3C7] border border-[#FDE68A] px-4 py-3 text-center">
+                <p class="text-xs font-bold uppercase tracking-wide text-[#92400E]">
+                    Comprobante de Control Interno — No Válido como Boleta Electrónica SII
+                </p>
+                <p class="text-[11px] font-mono text-[#92400E]/80 mt-1">
+                    UUID Idempotencia: {{ venta.idempotency_key }}
+                </p>
+            </div>
+
+            <!-- Botones inferiores -->
+            <div class="no-print pt-2 flex flex-col sm:flex-row items-center justify-end gap-3">
+                <button
+                    type="button"
+                    onclick="window.print()"
+                    class="w-full sm:w-auto min-h-[44px] px-5 rounded-lg border border-[#E2E8E4] bg-white hover:bg-[#F9FAF8] text-[#1F2933] text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-[#1B4332]"
+                >
+                    Imprimir Comprobante
+                </button>
+                <a
+                    href="{% url 'core:venta_meson' %}"
+                    class="w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center px-5 rounded-lg bg-[#1B4332] hover:bg-[#2D6A4F] text-white text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-[#2D6A4F]"
+                >
+                    Nueva Venta
+                </a>
+            </div>
+        </div>
+    </article>
+</div>
+{% endblock %}

@@ -36,8 +36,8 @@
                     </a>
 
                     <a
-                        href="/pos/"
-                        class="min-h-[44px] flex items-center px-3.5 rounded-lg text-sm font-medium transition-colors {% if request.path|slice:':5' == '/pos/' %}bg-[#2D6A4F] text-white{% else %}text-[#D8F3DC] hover:bg-[#2D6A4F] hover:text-white{% endif %} focus:outline-none focus:ring-2 focus:ring-[#D8F3DC]"
+                        href="{% url 'core:venta_meson' %}"
+                        class="min-h-[44px] flex items-center px-3.5 rounded-lg text-sm font-medium transition-colors {% if request.path|slice:':8' == '/ventas/' or request.path|slice:':5' == '/pos/' %}bg-[#2D6A4F] text-white{% else %}text-[#D8F3DC] hover:bg-[#2D6A4F] hover:text-white{% endif %} focus:outline-none focus:ring-2 focus:ring-[#D8F3DC]"
                     >
                         Punto de Venta (POS)
                     </a>

@@ -9,7 +9,7 @@ from core.models import Temporada
 
 def panel_context(request):
     """Expone datos de rol RBAC y temporada activa para las plantillas del panel."""
-    rutas_panel = ('/panel', '/inventario', '/pos', '/temporadas', '/reportes')
+    rutas_panel = ('/panel', '/inventario', '/ventas', '/pos', '/temporadas', '/reportes')
     if not request.path.startswith(rutas_panel):
         return {}
 
