@@ -1614,5 +1614,45 @@ class HorticolaSeedAndUITests(TestCase):
         self.assertIn('Ver Catálogo Público', html)
         self.assertIn('Control de Inventario', html)
 
+    def test_estaticos_sin_cdn_y_modal_catalogo_completo(self):
+        from django.core.management import call_command
+        from core.views.catalogo import CatalogoListView
+
+        call_command('seed_vivero', '--reset', stdout=io.StringIO())
+        admin_user = User.objects.get(username='admin_vivero')
+
+        # 1. Catálogo público: sin CDN, con tailwind.min.css, botanico.css, catalogo.js y atributos modal
+        req_cat = self.factory.get(reverse('core:catalogo'))
+        req_cat.user = AnonymousUser()
+        resp_cat = CatalogoListView.as_view()(req_cat)
+        resp_cat.render()
+        html_cat = resp_cat.content.decode('utf-8')
+        self.assertNotIn('cdn.tailwindcss.com', html_cat)
+        self.assertRegex(html_cat, r'css/tailwind\.min(\.[a-f0-9]+)?\.css')
+        self.assertRegex(html_cat, r'css/botanico(\.[a-f0-9]+)?\.css')
+        self.assertRegex(html_cat, r'js/catalogo(\.[a-f0-9]+)?\.js')
+        self.assertIn('data-open-modal', html_cat)
+        self.assertIn('data-close-modal', html_cat)
+        self.assertIn('data-imagen=', html_cat)
+        self.assertIn('ficha-modal', html_cat)
+
+        # 2. Panel interno: sin CDN, con tailwind.min.css y botanico.css
+        req_panel = _attach_session(self.factory.get(reverse('core:dashboard')))
+        req_panel.user = admin_user
+        resp_panel = DashboardOperacionalView.as_view()(req_panel)
+        html_panel = resp_panel.content.decode('utf-8')
+        self.assertNotIn('cdn.tailwindcss.com', html_panel)
+        self.assertRegex(html_panel, r'css/tailwind\.min(\.[a-f0-9]+)?\.css')
+        self.assertRegex(html_panel, r'css/botanico(\.[a-f0-9]+)?\.css')
+
+        # 3. Login: sin CDN, con tailwind.min.css
+        req_login = _attach_session(self.factory.get(reverse('core:login')))
+        req_login.user = AnonymousUser()
+        resp_login = LoginViveroView.as_view()(req_login)
+        html_login = resp_login.content.decode('utf-8')
+        self.assertNotIn('cdn.tailwindcss.com', html_login)
+        self.assertRegex(html_login, r'css/tailwind\.min(\.[a-f0-9]+)?\.css')
+
+
 
 

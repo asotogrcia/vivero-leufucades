@@ -9,14 +9,16 @@
         <div>
             <div class="flex flex-wrap items-center gap-2 mb-2">
                 {% if temporada_activa %}
-                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#D8F3DC] text-[#1B4332]">
-                        <span class="w-2 h-2 rounded-full bg-[#1B4332] animate-pulse"></span>
-                        Ciclo Activo: {{ temporada_activa.nombre }}
-                    </span>
+                <span
+                    class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#D8F3DC] text-[#1B4332]">
+                    <span class="w-2 h-2 rounded-full bg-[#1B4332] animate-pulse"></span>
+                    Ciclo Activo: {{ temporada_activa.nombre }}
+                </span>
                 {% else %}
-                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-[#F9FAF8] text-[#52606D] border border-[#E2E8E4]">
-                        Sin ciclo estacional activo
-                    </span>
+                <span
+                    class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-[#F9FAF8] text-[#52606D] border border-[#E2E8E4]">
+                    Sin ciclo estacional activo
+                </span>
                 {% endif %}
                 <span class="text-xs text-[#52606D]">
                     {{ productos|length }} hortaliza{{ productos|length|pluralize:"s" }} en vista
@@ -26,275 +28,291 @@
                 Catálogo de Hortalizas, Almácigos y Plantines
             </h1>
             <p class="text-sm text-[#52606D] mt-1 max-w-2xl">
-                Cultivos hortícolas e insumos aclimatados a la Región de Los Ríos, listos para trasplante y retiro en mesón.
+                Cultivos hortícolas e insumos aclimatados a la Región de Los Ríos, listos para trasplante y retiro en
+                mesón.
             </p>
         </div>
 
-        <form method="get" action="{% url 'core:catalogo' %}" data-catalogo-search-form class="hidden sm:flex w-full lg:w-auto lg:min-w-[320px] items-center gap-2">
+        <form method="get" action="{% url 'core:catalogo' %}" data-catalogo-search-form
+            class="hidden sm:flex w-full lg:w-auto lg:min-w-[320px] items-center gap-2">
             {% if temporada_seleccionada and temporada_seleccionada != 'actual' %}
-                <input type="hidden" name="temporada" value="{{ temporada_seleccionada }}">
+            <input type="hidden" name="temporada" value="{{ temporada_seleccionada }}">
             {% endif %}
             <label for="buscador-filtro" class="sr-only">Filtrar hortalizas</label>
-            <input
-                id="buscador-filtro"
-                type="search"
-                name="q"
-                value="{{ query }}"
+            <input id="buscador-filtro" type="search" name="q" value="{{ query }}"
                 placeholder="Buscar tomate, lechuga, SKU..."
-                class="w-full min-h-[44px] px-3.5 rounded-lg border border-[#E2E8E4] bg-[#F9FAF8] text-[#1F2933] placeholder-[#52606D] focus:outline-none focus:ring-2 focus:ring-[#2D6A4F] focus:bg-white"
-            >
-            <button
-                type="submit"
-                class="min-h-[44px] px-4 rounded-lg bg-[#1B4332] hover:bg-[#2D6A4F] text-white text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[#2D6A4F] shrink-0"
-            >
+                class="w-full min-h-[44px] px-3.5 rounded-lg border border-[#E2E8E4] bg-[#F9FAF8] text-[#1F2933] placeholder-[#52606D] focus:outline-none focus:ring-2 focus:ring-[#2D6A4F] focus:bg-white">
+            <button type="submit"
+                class="min-h-[44px] px-4 rounded-lg bg-[#1B4332] hover:bg-[#2D6A4F] text-white text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[#2D6A4F] shrink-0">
                 Filtrar
             </button>
         </form>
     </div>
 </section>
 
-<div class="sticky top-[116px] md:static z-20 bg-[#F9FAF8]/95 backdrop-blur-sm border-y border-[#E2E8E4] md:border md:bg-white md:rounded-xl -mx-4 px-4 py-2.5 md:mx-0 md:px-4 md:py-3 mb-5">
-    <nav aria-label="Filtros por ciclo hortícola" class="flex items-center gap-2 overflow-x-auto whitespace-nowrap no-scrollbar">
-        <a
-            href="{% url 'core:catalogo' %}?temporada=actual{% if query %}&q={{ query|urlencode }}{% endif %}"
+<div
+    class="sticky top-[116px] md:static z-20 bg-[#F9FAF8]/95 backdrop-blur-sm border-y border-[#E2E8E4] md:border md:bg-white md:rounded-xl -mx-4 px-4 py-2.5 md:mx-0 md:px-4 md:py-3 mb-5">
+    <nav aria-label="Filtros por ciclo hortícola"
+        class="flex items-center gap-2 overflow-x-auto whitespace-nowrap no-scrollbar">
+        <a href="{% url 'core:catalogo' %}?temporada=actual{% if query %}&q={{ query|urlencode }}{% endif %}"
             data-catalogo-filter
-            class="min-h-[44px] inline-flex items-center px-4 rounded-full text-sm font-medium border shrink-0 transition-colors focus:outline-none focus:ring-2 focus:ring-[#2D6A4F] {% if temporada_seleccionada == 'actual' %}bg-[#1B4332] text-white border-[#1B4332]{% else %}bg-white text-[#52606D] border-[#E2E8E4] hover:border-[#2D6A4F] hover:text-[#1B4332]{% endif %}"
-        >
+            class="min-h-[44px] inline-flex items-center px-4 rounded-full text-sm font-medium border shrink-0 transition-colors focus:outline-none focus:ring-2 focus:ring-[#2D6A4F] {% if temporada_seleccionada == 'actual' %}bg-[#1B4332] text-white border-[#1B4332]{% else %}bg-white text-[#52606D] border-[#E2E8E4] hover:border-[#2D6A4F] hover:text-[#1B4332]{% endif %}">
             Ciclo Actual
         </a>
 
-        <a
-            href="{% url 'core:catalogo' %}?temporada=fijos{% if query %}&q={{ query|urlencode }}{% endif %}"
+        <a href="{% url 'core:catalogo' %}?temporada=fijos{% if query %}&q={{ query|urlencode }}{% endif %}"
             data-catalogo-filter
-            class="min-h-[44px] inline-flex items-center px-4 rounded-full text-sm font-medium border shrink-0 transition-colors focus:outline-none focus:ring-2 focus:ring-[#2D6A4F] {% if temporada_seleccionada == 'fijos' %}bg-[#1B4332] text-white border-[#1B4332]{% else %}bg-white text-[#52606D] border-[#E2E8E4] hover:border-[#2D6A4F] hover:text-[#1B4332]{% endif %}"
-        >
+            class="min-h-[44px] inline-flex items-center px-4 rounded-full text-sm font-medium border shrink-0 transition-colors focus:outline-none focus:ring-2 focus:ring-[#2D6A4F] {% if temporada_seleccionada == 'fijos' %}bg-[#1B4332] text-white border-[#1B4332]{% else %}bg-white text-[#52606D] border-[#E2E8E4] hover:border-[#2D6A4F] hover:text-[#1B4332]{% endif %}">
             Todo el año
         </a>
 
         {% for temp in temporadas %}
-            <a
-                href="{% url 'core:catalogo' %}?temporada={{ temp.id_temporada }}{% if query %}&q={{ query|urlencode }}{% endif %}"
-                data-catalogo-filter
-                class="min-h-[44px] inline-flex items-center px-4 rounded-full text-sm font-medium border shrink-0 transition-colors focus:outline-none focus:ring-2 focus:ring-[#2D6A4F] {% if temporada_seleccionada == temp.id_temporada|stringformat:'s' %}bg-[#1B4332] text-white border-[#1B4332]{% else %}bg-white text-[#52606D] border-[#E2E8E4] hover:border-[#2D6A4F] hover:text-[#1B4332]{% endif %}"
-            >
-                {{ temp.nombre }}
-            </a>
+        <a href="{% url 'core:catalogo' %}?temporada={{ temp.id_temporada }}{% if query %}&q={{ query|urlencode }}{% endif %}"
+            data-catalogo-filter
+            class="min-h-[44px] inline-flex items-center px-4 rounded-full text-sm font-medium border shrink-0 transition-colors focus:outline-none focus:ring-2 focus:ring-[#2D6A4F] {% if temporada_seleccionada == temp.id_temporada|stringformat:'s' %}bg-[#1B4332] text-white border-[#1B4332]{% else %}bg-white text-[#52606D] border-[#E2E8E4] hover:border-[#2D6A4F] hover:text-[#1B4332]{% endif %}">
+            {{ temp.nombre }}
+        </a>
         {% endfor %}
 
-        <a
-            href="{% url 'core:catalogo' %}?temporada=todas{% if query %}&q={{ query|urlencode }}{% endif %}"
+        <a href="{% url 'core:catalogo' %}?temporada=todas{% if query %}&q={{ query|urlencode }}{% endif %}"
             data-catalogo-filter
-            class="min-h-[44px] inline-flex items-center px-4 rounded-full text-sm font-medium border shrink-0 transition-colors focus:outline-none focus:ring-2 focus:ring-[#2D6A4F] {% if temporada_seleccionada == 'todas' %}bg-[#1B4332] text-white border-[#1B4332]{% else %}bg-white text-[#52606D] border-[#E2E8E4] hover:border-[#2D6A4F] hover:text-[#1B4332]{% endif %}"
-        >
+            class="min-h-[44px] inline-flex items-center px-4 rounded-full text-sm font-medium border shrink-0 transition-colors focus:outline-none focus:ring-2 focus:ring-[#2D6A4F] {% if temporada_seleccionada == 'todas' %}bg-[#1B4332] text-white border-[#1B4332]{% else %}bg-white text-[#52606D] border-[#E2E8E4] hover:border-[#2D6A4F] hover:text-[#1B4332]{% endif %}">
             Todas
         </a>
 
         {% if query or temporada_seleccionada != 'actual' %}
-            <a
-                href="{% url 'core:catalogo' %}"
-                data-catalogo-filter
-                class="min-h-[44px] inline-flex items-center px-3 text-xs font-medium text-[#52606D] hover:text-[#1B4332] underline shrink-0 md:ml-auto"
-            >
-                Limpiar filtros
-            </a>
+        <a href="{% url 'core:catalogo' %}" data-catalogo-filter
+            class="min-h-[44px] inline-flex items-center px-3 text-xs font-medium text-[#52606D] hover:text-[#1B4332] underline shrink-0 md:ml-auto">
+            Limpiar filtros
+        </a>
         {% endif %}
     </nav>
 </div>
 
-<section id="catalogo-skeleton-grid" aria-hidden="true" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
+<section id="catalogo-skeleton-grid" aria-hidden="true"
+    class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
     {% for i in '123456' %}
-        <div class="bg-white border border-[#E2E8E4] rounded-xl overflow-hidden flex flex-col">
-            <div class="aspect-[4/3] bg-[#E8ECE9] animate-pulse"></div>
-            <div class="p-4 space-y-3">
-                <div class="flex justify-between gap-2">
-                    <div class="h-5 w-20 rounded-full bg-[#E8ECE9] animate-pulse"></div>
-                    <div class="h-5 w-24 rounded-full bg-[#F2F4F2] animate-pulse"></div>
-                </div>
-                <div class="h-5 w-3/4 rounded bg-[#E8ECE9] animate-pulse"></div>
-                <div class="h-3.5 w-1/2 rounded bg-[#F2F4F2] animate-pulse"></div>
-                <div class="flex flex-wrap gap-1.5 pt-1">
-                    <div class="h-6 w-20 rounded-md bg-[#F2F4F2] animate-pulse"></div>
-                    <div class="h-6 w-20 rounded-md bg-[#F2F4F2] animate-pulse"></div>
-                </div>
-                <div class="pt-3 mt-2 border-t border-[#E2E8E4] flex justify-between items-center">
-                    <div class="h-4 w-20 rounded bg-[#F2F4F2] animate-pulse"></div>
-                    <div class="h-6 w-16 rounded bg-[#E8ECE9] animate-pulse"></div>
-                </div>
-                <div class="h-11 w-full rounded-lg bg-[#E8ECE9] animate-pulse"></div>
+    <div class="bg-white border border-[#E2E8E4] rounded-xl overflow-hidden flex flex-col">
+        <div class="aspect-[4/3] bg-[#E8ECE9] animate-pulse"></div>
+        <div class="p-4 space-y-3">
+            <div class="flex justify-between gap-2">
+                <div class="h-5 w-20 rounded-full bg-[#E8ECE9] animate-pulse"></div>
+                <div class="h-5 w-24 rounded-full bg-[#F2F4F2] animate-pulse"></div>
             </div>
+            <div class="h-5 w-3/4 rounded bg-[#E8ECE9] animate-pulse"></div>
+            <div class="h-3.5 w-1/2 rounded bg-[#F2F4F2] animate-pulse"></div>
+            <div class="flex flex-wrap gap-1.5 pt-1">
+                <div class="h-6 w-20 rounded-md bg-[#F2F4F2] animate-pulse"></div>
+                <div class="h-6 w-20 rounded-md bg-[#F2F4F2] animate-pulse"></div>
+            </div>
+            <div class="pt-3 mt-2 border-t border-[#E2E8E4] flex justify-between items-center">
+                <div class="h-4 w-20 rounded bg-[#F2F4F2] animate-pulse"></div>
+                <div class="h-6 w-16 rounded bg-[#E8ECE9] animate-pulse"></div>
+            </div>
+            <div class="h-11 w-full rounded-lg bg-[#E8ECE9] animate-pulse"></div>
         </div>
+    </div>
     {% endfor %}
 </section>
 
 <div id="catalogo-contenido">
     {% if productos %}
-        <section aria-label="Listado de hortalizas, almácigos y plantines" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
-            {% for producto in productos %}
-                <article class="group bg-white border border-[#E2E8E4] rounded-xl overflow-hidden flex flex-col transition-shadow hover:shadow-sm">
-                    <div class="aspect-[4/3] bg-[#F2F4F2] border-b border-[#E2E8E4] overflow-hidden relative flex items-center justify-center">
-                        {% if producto.url_imagen %}
-                            <div class="img-skeleton absolute inset-0 bg-[#E8ECE9] animate-pulse flex items-center justify-center" aria-hidden="true">
-                                <svg class="w-10 h-10 text-[#95D5B2]" viewBox="0 0 48 48" fill="none">
-                                    <path d="M24 38V20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                                    <path d="M24 25C17.5 25 13 20.5 13 14C19.5 14 24 18.5 24 25Z" fill="#F2F4F2" stroke="currentColor" stroke-width="1.8"/>
-                                    <path d="M24 21C24 14.5 28.5 10 35 10C35 16.5 30.5 21 24 21Z" fill="#F2F4F2" stroke="currentColor" stroke-width="1.8"/>
-                                </svg>
-                            </div>
-                            <img
-                                src="{{ producto.url_imagen.url }}"
-                                alt="{{ producto.nombre_comun }}"
-                                loading="lazy"
-                                class="w-full h-full object-cover opacity-0 transition-all duration-300 group-hover:scale-105"
-                            >
+    <section aria-label="Listado de hortalizas, almácigos y plantines"
+        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
+        {% for producto in productos %}
+        <article data-product-card
+            class="group bg-white border border-[#E2E8E4] rounded-xl overflow-hidden flex flex-col transition-shadow hover:shadow-sm cursor-pointer">
+            <div
+                class="aspect-[4/3] bg-[#F2F4F2] border-b border-[#E2E8E4] overflow-hidden relative flex items-center justify-center">
+                {% if producto.url_imagen %}
+                <div class="img-skeleton absolute inset-0 bg-[#E8ECE9] animate-pulse flex items-center justify-center"
+                    aria-hidden="true">
+                    <svg class="w-10 h-10 text-[#95D5B2]" viewBox="0 0 48 48" fill="none">
+                        <path d="M24 38V20" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                        <path d="M24 25C17.5 25 13 20.5 13 14C19.5 14 24 18.5 24 25Z" fill="#F2F4F2"
+                            stroke="currentColor" stroke-width="1.8" />
+                        <path d="M24 21C24 14.5 28.5 10 35 10C35 16.5 30.5 21 24 21Z" fill="#F2F4F2"
+                            stroke="currentColor" stroke-width="1.8" />
+                    </svg>
+                </div>
+                <img src="{{ producto.url_imagen.url }}" alt="{{ producto.nombre_comun }}" loading="lazy"
+                    class="w-full h-full object-cover opacity-0 transition-all duration-300 group-hover:scale-105">
+                {% else %}
+                <div class="flex flex-col items-center justify-center text-[#2D6A4F]/60 p-6" aria-hidden="true">
+                    <svg class="w-14 h-14" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M24 40V20" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" />
+                        <path d="M24 26C16.5 26 11 20.5 11 13C18.5 13 24 18.5 24 26Z" fill="#D8F3DC"
+                            stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+                        <path d="M24 21C24 13.5 29.5 8 37 8C37 15.5 31.5 21 24 21Z" fill="#D8F3DC" stroke="currentColor"
+                            stroke-width="2" stroke-linejoin="round" />
+                        <path d="M16 40H32" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" />
+                    </svg>
+                    <span class="mt-2 text-xs text-[#52606D]">Sin fotografía</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="p-4 flex-1 flex flex-col">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+                    {% if producto.es_fijo %}
+                    <span
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#FEF3C7] text-[#92400E]">
+                        Todo el año
+                    </span>
+                    {% elif producto.id_temporada %}
+                    <span
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#D8F3DC] text-[#1B4332]">
+                        {{ producto.id_temporada.nombre }}
+                    </span>
+                    {% endif %}
+
+                    {% if producto.stock_actual > 0 %}
+                    <span
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#D8F3DC]/70 text-[#1B4332]">
+                        Disponible en vivero
+                    </span>
+                    {% else %}
+                    <span
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#F2F4F2] text-[#52606D] border border-[#E2E8E4]">
+                        Agotado temporalmente
+                    </span>
+                    {% endif %}
+                </div>
+
+                <h2 class="text-base font-semibold text-[#1F2933] leading-snug">
+                    {{ producto.nombre_comun }}
+                </h2>
+
+                {% if producto.nombre_cientifico %}
+                <p class="text-xs italic text-[#52606D] mt-0.5">
+                    {{ producto.nombre_cientifico }}
+                </p>
+                {% endif %}
+
+                {% with pildoras=producto.descripcion_cuidados|pildoras_horticolas %}
+                <div class="mt-3 flex flex-wrap gap-1.5 flex-1 content-start">
+                    {% for pildora in pildoras %}
+                    <span
+                        class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] bg-[#F9FAF8] border border-[#E2E8E4] text-[#52606D]">
+                        {% if pildora.tipo == 'riego' %}
+                        <svg class="w-3.5 h-3.5 text-[#2D6A4F] shrink-0" viewBox="0 0 20 20" fill="currentColor"
+                            aria-hidden="true">
+                            <path fill-rule="evenodd"
+                                d="M10 2.5c-2.5 3.6-5.5 6.8-5.5 10a5.5 5.5 0 0011 0c0-3.2-3-6.4-5.5-10z"
+                                clip-rule="evenodd" />
+                        </svg>
+                        {% elif pildora.tipo == 'luz' %}
+                        <svg class="w-3.5 h-3.5 text-[#92400E] shrink-0" viewBox="0 0 20 20" fill="currentColor"
+                            aria-hidden="true">
+                            <path
+                                d="M10 3a1 1 0 011 1v1a1 1 0 11-2 0V4a1 1 0 011-1zm0 10a3 3 0 100-6 3 3 0 000 6zm6-3a1 1 0 011-1h1a1 1 0 110 2h-1a1 1 0 01-1-1zM2 10a1 1 0 011-1h1a1 1 0 110 2H3a1 1 0 01-1-1z" />
+                        </svg>
                         {% else %}
-                            <div class="flex flex-col items-center justify-center text-[#2D6A4F]/60 p-6" aria-hidden="true">
-                                <svg class="w-14 h-14" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M24 40V20" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
-                                    <path d="M24 26C16.5 26 11 20.5 11 13C18.5 13 24 18.5 24 26Z" fill="#D8F3DC" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-                                    <path d="M24 21C24 13.5 29.5 8 37 8C37 15.5 31.5 21 24 21Z" fill="#D8F3DC" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-                                    <path d="M16 40H32" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
-                                </svg>
-                                <span class="mt-2 text-xs text-[#52606D]">Sin fotografía</span>
-                            </div>
+                        <svg class="w-3.5 h-3.5 text-[#1B4332] shrink-0" viewBox="0 0 20 20" fill="currentColor"
+                            aria-hidden="true">
+                            <path
+                                d="M10 17a1 1 0 01-1-1v-5.5C6.5 10.5 4.5 8.5 4.5 6c2.5 0 4.5 2 4.5 4.5V6c0-2.5 2-4.5 4.5-4.5 0 2.5-2 4.5-4.5 4.5v4.5c0-2.5 2-4.5 4.5-4.5 0 2.5-2 4.5-4.5 4.5V16a1 1 0 01-1 1z" />
+                        </svg>
                         {% endif %}
-                    </div>
+                        <span class="font-medium text-[#1F2933]">{{ pildora.etiqueta }}:</span>
+                        <span>{{ pildora.valor }}</span>
+                    </span>
+                    {% endfor %}
+                </div>
 
-                    <div class="p-4 flex-1 flex flex-col">
-                        <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5">
-                            {% if producto.es_fijo %}
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#FEF3C7] text-[#92400E]">
-                                    Todo el año
-                                </span>
-                            {% elif producto.id_temporada %}
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#D8F3DC] text-[#1B4332]">
-                                    {{ producto.id_temporada.nombre }}
-                                </span>
-                            {% endif %}
+                <div class="pt-3 mt-4 border-t border-[#E2E8E4] flex items-baseline justify-between gap-2">
+                    <span class="text-xs text-[#52606D]">Precio unitario</span>
+                    <span class="text-lg font-bold text-[#1B4332]">
+                        {{ producto.precio_unitario|clp }}
+                    </span>
+                </div>
 
-                            {% if producto.stock_actual > 0 %}
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#D8F3DC]/70 text-[#1B4332]">
-                                    Disponible en vivero
-                                </span>
-                            {% else %}
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#F2F4F2] text-[#52606D] border border-[#E2E8E4]">
-                                    Agotado temporalmente
-                                </span>
-                            {% endif %}
-                        </div>
-
-                        <h2 class="text-base font-semibold text-[#1F2933] leading-snug">
-                            {{ producto.nombre_comun }}
-                        </h2>
-
-                        {% if producto.nombre_cientifico %}
-                            <p class="text-xs italic text-[#52606D] mt-0.5">
-                                {{ producto.nombre_cientifico }}
-                            </p>
-                        {% endif %}
-
-                        <div class="mt-3 flex flex-wrap gap-1.5 flex-1 content-start">
-                            {% for pildora in producto.descripcion_cuidados|pildoras_horticolas %}
-                                <span class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] bg-[#F9FAF8] border border-[#E2E8E4] text-[#52606D]">
-                                    {% if pildora.tipo == 'riego' %}
-                                        <svg class="w-3.5 h-3.5 text-[#2D6A4F] shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                            <path fill-rule="evenodd" d="M10 2.5c-2.5 3.6-5.5 6.8-5.5 10a5.5 5.5 0 0011 0c0-3.2-3-6.4-5.5-10z" clip-rule="evenodd"/>
-                                        </svg>
-                                    {% elif pildora.tipo == 'luz' %}
-                                        <svg class="w-3.5 h-3.5 text-[#92400E] shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                            <path d="M10 3a1 1 0 011 1v1a1 1 0 11-2 0V4a1 1 0 011-1zm0 10a3 3 0 100-6 3 3 0 000 6zm6-3a1 1 0 011-1h1a1 1 0 110 2h-1a1 1 0 01-1-1zM2 10a1 1 0 011-1h1a1 1 0 110 2H3a1 1 0 01-1-1z"/>
-                                        </svg>
-                                    {% else %}
-                                        <svg class="w-3.5 h-3.5 text-[#1B4332] shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                            <path d="M10 17a1 1 0 01-1-1v-5.5C6.5 10.5 4.5 8.5 4.5 6c2.5 0 4.5 2 4.5 4.5V6c0-2.5 2-4.5 4.5-4.5 0 2.5-2 4.5-4.5 4.5v4.5c0-2.5 2-4.5 4.5-4.5 0 2.5-2 4.5-4.5 4.5V16a1 1 0 01-1 1z"/>
-                                        </svg>
-                                    {% endif %}
-                                    <span class="font-medium text-[#1F2933]">{{ pildora.etiqueta }}:</span>
-                                    <span>{{ pildora.valor }}</span>
-                                </span>
-                            {% endfor %}
-                        </div>
-
-                        <div class="pt-3 mt-4 border-t border-[#E2E8E4] flex items-baseline justify-between gap-2">
-                            <span class="text-xs text-[#52606D]">Precio unitario</span>
-                            <span class="text-lg font-bold text-[#1B4332]">
-                                {{ producto.precio_unitario|clp }}
-                            </span>
-                        </div>
-
-                        <button
-                            type="button"
-                            data-modal-trigger
-                            data-nombre="{{ producto.nombre_comun }}"
-                            data-cientifico="{{ producto.nombre_cientifico }}"
-                            data-sku="{{ producto.sku }}"
-                            data-temporada="{% if producto.es_fijo %}Todo el año{% elif producto.id_temporada %}{{ producto.id_temporada.nombre }}{% else %}Estacional{% endif %}"
-                            data-es-fijo="{% if producto.es_fijo %}1{% else %}0{% endif %}"
-                            data-estado="{% if producto.stock_actual > 0 %}Disponible en vivero{% else %}Agotado temporalmente{% endif %}"
-                            data-disponible="{% if producto.stock_actual > 0 %}1{% else %}0{% endif %}"
-                            data-precio="{{ producto.precio_unitario|clp }}"
-                            data-cuidados="{{ producto.descripcion_cuidados|default:'Consulta en mesón por recomendaciones de riego, luz solar y trasplante.' }}"
-                            class="mt-3 w-full min-h-[44px] px-3.5 rounded-lg border border-[#E2E8E4] bg-[#F9FAF8] hover:bg-[#D8F3DC] text-[#1B4332] text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[#2D6A4F]"
-                        >
-                            Ver detalles de cultivo
-                        </button>
-                    </div>
-                </article>
-            {% endfor %}
-        </section>
+                <button type="button" data-modal-trigger data-open-modal data-nombre="{{ producto.nombre_comun }}"
+                    data-cientifico="{{ producto.nombre_cientifico }}" data-sku="{{ producto.sku }}"
+                    data-temporada="{% if producto.es_fijo %}Todo el año{% elif producto.id_temporada %}{{ producto.id_temporada.nombre }}{% else %}Estacional{% endif %}"
+                    data-es-fijo="{% if producto.es_fijo %}1{% else %}0{% endif %}"
+                    data-estado="{% if producto.stock_actual > 0 %}Disponible en vivero{% else %}Agotado temporalmente{% endif %}"
+                    data-disponible="{% if producto.stock_actual > 0 %}1{% else %}0{% endif %}"
+                    data-precio="{{ producto.precio_unitario|clp }}"
+                    data-cuidados="{{ producto.descripcion_cuidados|default:'Consulta en mesón por recomendaciones de riego, luz solar y trasplante.' }}"
+                    data-imagen="{% if producto.url_imagen %}{{ producto.url_imagen.url }}{% endif %}" {% for p in
+                    pildoras %}{% if p.tipo=='riego' %} data-riego="{{ p.valor }}" {% elif p.tipo=='luz' %}
+                    data-luz="{{ p.valor }}" {% endif %}{% endfor %}
+                    class="mt-3 w-full min-h-[44px] px-3.5 rounded-lg border border-[#E2E8E4] bg-[#F9FAF8] hover:bg-[#D8F3DC] text-[#1B4332] text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[#2D6A4F]">
+                    Ver detalles de cultivo
+                </button>
+                {% endwith %}
+            </div>
+        </article>
+        {% endfor %}
+    </section>
     {% else %}
-        <section class="bg-white border border-[#E2E8E4] rounded-xl p-8 sm:p-10 text-center">
-            <p class="text-base font-medium text-[#1F2933]">
-                No encontramos hortalizas, almácigos ni plantines que coincidan con tu búsqueda.
-            </p>
-            <p class="text-sm text-[#52606D] mt-1">
-                Prueba con otro nombre o selecciona "Todas" las temporadas para ver el catálogo completo.
-            </p>
-            <a
-                href="{% url 'core:catalogo' %}"
-                data-catalogo-filter
-                class="mt-4 min-h-[44px] inline-flex items-center px-5 rounded-lg bg-[#1B4332] hover:bg-[#2D6A4F] text-white text-sm font-medium transition-colors"
-            >
-                Ver ciclo actual
-            </a>
-        </section>
+    <section class="bg-white border border-[#E2E8E4] rounded-xl p-8 sm:p-10 text-center">
+        <p class="text-base font-medium text-[#1F2933]">
+            No encontramos hortalizas, almácigos ni plantines que coincidan con tu búsqueda.
+        </p>
+        <p class="text-sm text-[#52606D] mt-1">
+            Prueba con otro nombre o selecciona "Todas" las temporadas para ver el catálogo completo.
+        </p>
+        <a href="{% url 'core:catalogo' %}" data-catalogo-filter
+            class="mt-4 min-h-[44px] inline-flex items-center px-5 rounded-lg bg-[#1B4332] hover:bg-[#2D6A4F] text-white text-sm font-medium transition-colors">
+            Ver ciclo actual
+        </a>
+    </section>
     {% endif %}
 </div>
 
-<div
-    id="ficha-modal"
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="ficha-modal-titulo"
-    class="fixed inset-0 z-50 hidden items-end sm:items-center justify-center bg-black/40 p-0 sm:p-4"
->
-    <div class="bg-white w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl border border-[#E2E8E4] shadow-xl overflow-hidden max-h-[85vh] flex flex-col">
+<div id="ficha-modal" role="dialog" aria-modal="true" aria-labelledby="ficha-modal-titulo"
+    class="fixed inset-0 z-50 hidden items-end sm:items-center justify-center bg-black/40 p-0 sm:p-4">
+    <div
+        class="bg-white w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl border border-[#E2E8E4] shadow-xl overflow-hidden max-h-[85vh] flex flex-col">
         <div class="px-5 py-4 border-b border-[#E2E8E4] flex items-start justify-between gap-3">
             <div>
                 <div class="flex flex-wrap items-center gap-2 mb-1.5">
-                    <span id="ficha-modal-temporada" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#D8F3DC] text-[#1B4332]"></span>
-                    <span id="ficha-modal-estado" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"></span>
+                    <span id="ficha-modal-temporada"
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#D8F3DC] text-[#1B4332]"></span>
+                    <span id="ficha-modal-estado"
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"></span>
                 </div>
                 <h2 id="ficha-modal-titulo" class="text-lg font-semibold text-[#1F2933]"></h2>
                 <p id="ficha-modal-cientifico" class="text-xs italic text-[#52606D] mt-0.5"></p>
             </div>
-            <button
-                type="button"
-                id="ficha-modal-cerrar"
-                aria-label="Cerrar ficha técnica"
-                class="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg text-[#52606D] hover:bg-[#F9FAF8] hover:text-[#1F2933] focus:outline-none focus:ring-2 focus:ring-[#2D6A4F]"
-            >
+            <button type="button" id="ficha-modal-cerrar" data-close-modal aria-label="Cerrar ficha técnica"
+                class="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg text-[#52606D] hover:bg-[#F9FAF8] hover:text-[#1F2933] focus:outline-none focus:ring-2 focus:ring-[#2D6A4F]">
                 <svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                    <path fill-rule="evenodd"
+                        d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                        clip-rule="evenodd" />
                 </svg>
             </button>
         </div>
 
         <div class="p-5 overflow-y-auto space-y-4">
+            <div id="ficha-modal-imagen-wrap"
+                class="hidden overflow-hidden rounded-xl border border-[#E2E8E4] bg-[#F2F4F2]">
+                <img id="ficha-modal-imagen" src="" alt="" class="w-full h-48 object-cover">
+            </div>
+
+            <div id="ficha-modal-guia" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div id="ficha-modal-riego-wrap"
+                    class="hidden rounded-lg bg-[#F9FAF8] border border-[#E2E8E4] px-3 py-2 text-xs">
+                    <span class="block font-semibold text-[#1B4332]">Riego</span>
+                    <span id="ficha-modal-riego" class="text-[#52606D]"></span>
+                </div>
+                <div id="ficha-modal-luz-wrap"
+                    class="hidden rounded-lg bg-[#F9FAF8] border border-[#E2E8E4] px-3 py-2 text-xs">
+                    <span class="block font-semibold text-[#92400E]">Exposición / Luz</span>
+                    <span id="ficha-modal-luz" class="text-[#52606D]"></span>
+                </div>
+            </div>
+
             <div>
                 <h3 class="text-xs font-semibold uppercase tracking-wider text-[#52606D] mb-1.5">
                     Instrucciones de trasplante y cuidado
                 </h3>
-                <p id="ficha-modal-cuidados" class="text-sm text-[#1F2933] leading-relaxed bg-[#F9FAF8] border border-[#E2E8E4] rounded-xl p-3.5"></p>
+                <p id="ficha-modal-cuidados"
+                    class="text-sm text-[#1F2933] leading-relaxed bg-[#F9FAF8] border border-[#E2E8E4] rounded-xl p-3.5">
+                </p>
             </div>
 
             <div class="flex items-center justify-between pt-2 border-t border-[#E2E8E4]">
@@ -310,11 +328,8 @@
         </div>
 
         <div class="px-5 py-3.5 bg-[#F9FAF8] border-t border-[#E2E8E4]">
-            <button
-                type="button"
-                id="ficha-modal-aceptar"
-                class="w-full min-h-[44px] rounded-lg bg-[#1B4332] hover:bg-[#2D6A4F] text-white text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[#2D6A4F]"
-            >
+            <button type="button" id="ficha-modal-aceptar" data-close-modal
+                class="w-full min-h-[44px] rounded-lg bg-[#1B4332] hover:bg-[#2D6A4F] text-white text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[#2D6A4F]">
                 Volver al catálogo
             </button>
         </div>

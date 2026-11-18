@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Catálogo Hortícola — Vivero Leufucades{% endblock %}</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{% static 'css/tailwind.min.css' %}">
     <link rel="stylesheet" href="{% static 'css/botanico.css' %}">
 </head>
 <body class="min-h-screen bg-[#F9FAF8] text-[#1F2933] text-[15px] antialiased flex flex-col overflow-x-hidden">
@@ -55,6 +55,7 @@
         Vivero Leufucades — Catálogo de Hortalizas, Almácigos y Plantines (Región de Los Ríos)
     </footer>
 
+    <script src="{% static 'js/catalogo.js' %}" defer></script>
     {% block extra_scripts %}{% endblock %}
 </body>
 </html>
