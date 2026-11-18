@@ -38,15 +38,15 @@ class ProductoForm(forms.ModelForm):
             'stock_actual': 'Stock Actual (un.)',
             'stock_minimo': 'Stock Mínimo Crítico (un.)',
             'descripcion_cuidados': 'Descripción y Cuidados',
-            'url_imagen': 'Fotografía de la Especie (se convertirá a WebP)',
+            'url_imagen': 'Fotografía de la Hortaliza o Insumo (se convertirá a WebP)',
         }
         widgets = {
-            'sku': forms.TextInput(attrs={'class': INPUT_CSS, 'placeholder': 'Ej: VIV-001'}),
+            'sku': forms.TextInput(attrs={'class': INPUT_CSS, 'placeholder': 'Ej: HOR-PRI-01'}),
             'nombre_comun': forms.TextInput(
-                attrs={'class': INPUT_CSS, 'placeholder': 'Ej: Copihue Rojo'}
+                attrs={'class': INPUT_CSS, 'placeholder': 'Ej: Almácigo Tomate Limachino'}
             ),
             'nombre_cientifico': forms.TextInput(
-                attrs={'class': INPUT_CSS, 'placeholder': 'Ej: Lapageria rosea'}
+                attrs={'class': INPUT_CSS, 'placeholder': 'Ej: Solanum lycopersicum'}
             ),
             'id_temporada': forms.Select(attrs={'class': INPUT_CSS}),
             'es_fijo': forms.CheckboxInput(

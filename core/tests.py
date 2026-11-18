@@ -270,8 +270,8 @@ class AuthAndDashboardViewsTests(TestCase):
         self.assertIn('Ajuste #8', html)
         self.assertNotIn('Ajuste #1', html)
 
-        self.assertNotIn('/inventario/crear/', html)
-        self.assertNotIn('/temporadas/', html)
+        self.assertNotIn('/inventario/nuevo/', html)
+        self.assertNotIn('/inventario/maestros/', html)
         self.assertNotIn('/inventario/auditoria/', html)
         self.assertNotIn('/reportes/', html)
 
@@ -282,8 +282,8 @@ class AuthAndDashboardViewsTests(TestCase):
         self.assertEqual(resp.status_code, 200)
 
         html = resp.content.decode('utf-8')
-        self.assertIn('/inventario/crear/', html)
-        self.assertIn('/temporadas/', html)
+        self.assertIn('/inventario/nuevo/', html)
+        self.assertIn('/inventario/maestros/', html)
         self.assertIn('/inventario/auditoria/', html)
         self.assertIn('/reportes/', html)
 
@@ -1537,5 +1537,71 @@ class AuditoriaQAXPTests(TestCase):
         self.assertIn('HU08-001', html_aud)
         self.assertIn('(-3)', html_aud)
         self.assertIn('(-2)', html_aud)
+
+
+class HorticolaSeedAndUITests(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+
+    def test_seed_vivero_reset_y_catalogo_horticola(self):
+        from django.core.management import call_command
+
+        from core.views.catalogo import CatalogoListView
+
+        temp_vieja = Temporada.objects.create(nombre='Vieja', es_activa=True)
+        Producto.objects.create(
+            sku='OLD-999',
+            id_temporada=temp_vieja,
+            nombre_comun='Planta Antigua',
+            precio_unitario=5000,
+            stock_actual=10,
+            activo=True,
+        )
+
+        call_command('seed_vivero', '--reset', stdout=io.StringIO())
+
+        self.assertFalse(Producto.objects.filter(sku='OLD-999').exists())
+        self.assertEqual(Producto.objects.count(), 12)
+        self.assertEqual(Producto.objects.filter(es_fijo=True).count(), 4)
+        self.assertEqual(Producto.objects.filter(es_fijo=False).count(), 8)
+        self.assertEqual(Temporada.objects.filter(es_activa=True).count(), 1)
+        self.assertTrue(Temporada.objects.get(nombre='Primavera').es_activa)
+
+        self.assertTrue(Producto.objects.get(sku='HOR-FIJ-03').es_stock_critico)
+        self.assertTrue(Producto.objects.get(sku='HOR-PRI-03').es_stock_critico)
+        self.assertEqual(Producto.objects.get(sku='HOR-PRI-05').stock_actual, 0)
+
+        req = self.factory.get(reverse('core:catalogo'))
+        req.user = AnonymousUser()
+        resp = CatalogoListView.as_view()(req)
+        self.assertEqual(resp.status_code, 200)
+        resp.render()
+        html = resp.content.decode('utf-8')
+        self.assertIn('Catálogo de Hortalizas, Almácigos y Plantines', html)
+        self.assertIn('Almácigo Tomate Limachino', html)
+        self.assertIn('Sustrato Almácigos Hortalizas 25L', html)
+        self.assertIn('catalogo-skeleton-grid', html)
+        self.assertIn('ficha-modal', html)
+        self.assertIn('Ver detalles de cultivo', html)
+        self.assertIn('Riego:', html)
+
+    def test_sidebar_viewport_locked_y_badge_stock_critico(self):
+        from django.core.management import call_command
+
+        call_command('seed_vivero', '--reset', stdout=io.StringIO())
+        admin_user = User.objects.get(username='admin_vivero')
+
+        req = _attach_session(self.factory.get(reverse('core:dashboard')))
+        req.user = admin_user
+        resp = DashboardOperacionalView.as_view()(req)
+        self.assertEqual(resp.status_code, 200)
+        html = resp.content.decode('utf-8')
+        self.assertIn('h-screen overflow-hidden flex', html)
+        self.assertIn('Operación Diaria', html)
+        self.assertIn('Catálogo e Inventario', html)
+        self.assertIn('Control y Finanzas', html)
+        self.assertIn('Ver Catálogo Público', html)
+        self.assertIn('Control de Inventario', html)
+
 
 

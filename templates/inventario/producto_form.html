@@ -1,9 +1,9 @@
 {% extends "base_panel.html" %}
 
-{% block title %}{% if modo == 'editar' %}Editar Especie{% else %}Nueva Especie{% endif %} — Vivero Leufucades{% endblock %}
+{% block title %}{% if modo == 'editar' %}Editar Hortaliza{% else %}Ingresar Hortaliza{% endif %} — Vivero Leufucades{% endblock %}
 
 {% block page_title %}
-{% if modo == 'editar' %}Editar Especie: {{ producto.nombre_comun }}{% else %}Nueva Especie / Producto{% endif %}
+{% if modo == 'editar' %}Editar Hortaliza: {{ producto.nombre_comun }}{% else %}Ingresar Hortaliza / Insumo{% endif %}
 {% endblock %}
 {% block page_subtitle %}
 <p class="text-xs text-[#52606D] mt-0.5">

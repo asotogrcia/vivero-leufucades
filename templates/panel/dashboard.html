@@ -47,7 +47,7 @@
         </div>
 
         <div class="bg-white border border-[#E2E8E4] rounded-xl p-5">
-            <p class="text-xs font-semibold uppercase tracking-wider text-[#52606D]">Especies Activas</p>
+            <p class="text-xs font-semibold uppercase tracking-wider text-[#52606D]">Hortalizas e Insumos Activos</p>
             <p class="mt-2 text-2xl font-bold text-[#1F2933]">{{ resumen_productos.total_especies_activas }}</p>
             <p class="mt-1 text-xs text-[#52606D]">Disponibles en catálogo activo</p>
         </div>
@@ -58,12 +58,12 @@
             </p>
             <p class="mt-2 text-2xl font-bold">{{ resumen_productos.total_stock_critico }}</p>
             <p class="mt-1 text-xs {% if resumen_productos.total_stock_critico > 0 %}text-[#991B1B]/90{% else %}text-[#52606D]{% endif %}">
-                Especies bajo o en umbral mínimo
+                Productos bajo o en umbral mínimo
             </p>
         </div>
 
         <div class="bg-white border border-[#E2E8E4] rounded-xl p-5">
-            <p class="text-xs font-semibold uppercase tracking-wider text-[#52606D]">Especies Agotadas</p>
+            <p class="text-xs font-semibold uppercase tracking-wider text-[#52606D]">Productos Agotados</p>
             <p class="mt-2 text-2xl font-bold {% if resumen_productos.total_agotadas > 0 %}text-[#991B1B]{% else %}text-[#1F2933]{% endif %}">
                 {{ resumen_productos.total_agotadas }}
             </p>
@@ -72,10 +72,10 @@
     </section>
 
     {% if productos_criticos %}
-    <section aria-label="Especies con stock crítico" class="rounded-xl bg-[#FEF2F2] border border-[#FECACA] text-[#991B1B] overflow-hidden">
+    <section aria-label="Hortalizas con stock crítico" class="rounded-xl bg-[#FEF2F2] border border-[#FECACA] text-[#991B1B] overflow-hidden">
         <div class="px-5 py-4 border-b border-[#FECACA] flex flex-wrap items-center justify-between gap-3">
             <div>
-                <h2 class="text-base font-semibold">Especies con Stock Crítico</h2>
+                <h2 class="text-base font-semibold">Hortalizas e Insumos con Stock Crítico</h2>
                 <p class="text-xs text-[#991B1B]/90">Productos activos con stock actual menor o igual a su stock mínimo.</p>
             </div>
         </div>
@@ -84,7 +84,7 @@
                 <thead class="bg-[#FEE2E2] text-xs uppercase text-[#991B1B]">
                     <tr>
                         <th class="px-5 py-3 font-semibold">SKU</th>
-                        <th class="px-5 py-3 font-semibold">Especie / Producto</th>
+                        <th class="px-5 py-3 font-semibold">Hortaliza / Producto</th>
                         <th class="px-5 py-3 font-semibold text-right">Stock Actual</th>
                         <th class="px-5 py-3 font-semibold text-right">Mínimo</th>
                         {% if es_administradora %}

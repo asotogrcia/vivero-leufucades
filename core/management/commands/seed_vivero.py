@@ -3,18 +3,40 @@ from django.contrib.auth.models import Group
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from core.models import AuditoriaStock, Producto, Temporada
+from core.models import AuditoriaStock, DetalleVenta, Producto, Temporada, Venta
 
 
 class Command(BaseCommand):
     help = (
         'Pobla de forma idempotente los grupos RBAC, usuarios base, '
-        'las 4 temporadas y el catálogo inicial de productos de Vivero Leufucades.'
+        'las 4 temporadas y el catálogo hortícola de Vivero Leufucades.'
     )
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--reset',
+            action='store_true',
+            help=(
+                'Elimina productos, auditorías, ventas y temporadas previas '
+                'antes de sembrar el catálogo hortícola.'
+            ),
+        )
 
     @transaction.atomic
     def handle(self, *args, **options):
         User = get_user_model()
+
+        if options.get('reset'):
+            DetalleVenta.objects.all().delete()
+            Venta.objects.all().delete()
+            AuditoriaStock.objects.all().delete()
+            Producto.objects.all().delete()
+            Temporada.objects.all().delete()
+            self.stdout.write(
+                self.style.WARNING(
+                    '↺ Datos previos de productos, auditoría, ventas y temporadas eliminados (--reset).'
+                )
+            )
 
         # 1. Grupos RBAC
         grupo_admin, _ = Group.objects.get_or_create(name='Administradora General')
@@ -22,7 +44,7 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS('✔ Grupos RBAC verificados.'))
 
         # 2. Usuarios base
-        admin_user, created_admin = User.objects.update_or_create(
+        admin_user, _ = User.objects.update_or_create(
             username='admin_vivero',
             defaults={
                 'email': 'admin@viveroleufucades.cl',
@@ -37,7 +59,7 @@ class Command(BaseCommand):
         admin_user.save()
         admin_user.groups.set([grupo_admin])
 
-        operador_user, created_oper = User.objects.update_or_create(
+        operador_user, _ = User.objects.update_or_create(
             username='operador_meson',
             defaults={
                 'email': 'meson@viveroleufucades.cl',
@@ -69,158 +91,213 @@ class Command(BaseCommand):
                 defaults={'es_activa': activa},
             )
             temporadas_map[nombre_temp] = temp
+
         primavera = temporadas_map['Primavera']
+        verano = temporadas_map['Verano']
+        invierno = temporadas_map['Invierno']
         self.stdout.write(self.style.SUCCESS('✔ 4 Temporadas configuradas (Primavera activa).'))
 
         # 4. Los 4 productos permanentes (es_fijo=True, id_temporada=None)
         productos_permanentes = [
             {
-                'sku': 'VIV-001',
-                'nombre_comun': 'Sustrato Universal 25L',
-                'nombre_cientifico': 'Mezcla orgánica enriquecida',
+                'sku': 'HOR-FIJ-01',
+                'nombre_comun': 'Sustrato Almácigos Hortalizas 25L',
+                'nombre_cientifico': 'Mezcla orgánica para almácigos',
                 'precio_unitario': 6500,
-                'stock_actual': 25,
+                'stock_actual': 24,
                 'stock_minimo': 5,
                 'es_fijo': True,
                 'id_temporada': None,
                 'descripcion_cuidados': (
-                    'Almacenar en lugar fresco y seco. Ideal para trasplantes '
-                    'de especies de interior y exterior.'
+                    'Riego: Humedecer antes de sembrar. '
+                    'Luz: Almacenar bajo techo. '
+                    'Sustrato: Turba, perlita y compost tamizado. '
+                    'Mezcla liviana de excelente aireación y drenaje para germinación de almácigos y repique de plantines hortícolas.'
                 ),
             },
             {
-                'sku': 'VIV-002',
-                'nombre_comun': 'Humus de Lombriz 10kg',
+                'sku': 'HOR-FIJ-02',
+                'nombre_comun': 'Humus de Lombriz Orgánico 10kg',
                 'nombre_cientifico': 'Eisenia fetida humus',
                 'precio_unitario': 5900,
-                'stock_actual': 20,
-                'stock_minimo': 5,
-                'es_fijo': True,
-                'id_temporada': None,
-                'descripcion_cuidados': (
-                    'Abono orgánico de liberación lenta. Aplicar una capa de 2 cm '
-                    'alrededor del tallo cada 45 días.'
-                ),
-            },
-            {
-                'sku': 'VIV-003',
-                'nombre_comun': 'Ficus Lyrata',
-                'nombre_cientifico': 'Ficus lyrata',
-                'precio_unitario': 14900,
-                'stock_actual': 4,
-                'stock_minimo': 5,
-                'es_fijo': True,
-                'id_temporada': None,
-                'descripcion_cuidados': (
-                    'Luz indirecta abundante, riego moderado cuando los primeros '
-                    '3 cm del sustrato estén secos. Evitar corrientes frías.'
-                ),
-            },
-            {
-                'sku': 'VIV-004',
-                'nombre_comun': 'Helecho Boston',
-                'nombre_cientifico': 'Nephrolepis exaltata',
-                'precio_unitario': 7500,
                 'stock_actual': 18,
                 'stock_minimo': 5,
                 'es_fijo': True,
                 'id_temporada': None,
                 'descripcion_cuidados': (
-                    'Semisombra húmeda. Mantener el sustrato ligeramente húmedo '
-                    'sin encharcar; pulverizar follaje en días secos.'
+                    'Riego: Incorporar y regar suave. '
+                    'Luz: Conservar en lugar fresco. '
+                    'Sustrato: Abono orgánico 100% maduro. '
+                    'Mejora la retención de humedad y aporta microorganismos benéficos al hoyo de plantación de hortalizas.'
+                ),
+            },
+            {
+                'sku': 'HOR-FIJ-03',
+                'nombre_comun': 'Lechuga Costina Hidropónica / Invernadero',
+                'nombre_cientifico': 'Lactuca sativa var. longifolia',
+                'precio_unitario': 1800,
+                'stock_actual': 4,
+                'stock_minimo': 5,
+                'es_fijo': True,
+                'id_temporada': None,
+                'descripcion_cuidados': (
+                    'Riego: Frecuente sin encharcar. '
+                    'Luz: Semisombra o sol suave. '
+                    'Cosecha: 45-55 días. '
+                    'Plantín vigoroso adaptado a cultivo bajo plástico o cama alta en la Región de Los Ríos.'
+                ),
+            },
+            {
+                'sku': 'HOR-FIJ-04',
+                'nombre_comun': 'Perejil Liso de Corte Continuo',
+                'nombre_cientifico': 'Petroselinum crispum',
+                'precio_unitario': 1500,
+                'stock_actual': 22,
+                'stock_minimo': 5,
+                'es_fijo': True,
+                'id_temporada': None,
+                'descripcion_cuidados': (
+                    'Riego: Regular manteniendo humedad. '
+                    'Luz: Sol o semisombra luminosa. '
+                    'Cosecha: 60 días (rebrote continuo). '
+                    'Cosechar tallos exteriores desde la base sin dañar el brote central para producción durante todo el año.'
                 ),
             },
         ]
 
-        # 5. Las 6 especies estacionales asociadas a Primavera
-        productos_primavera = [
+        # 5. Las 8 hortalizas de temporada (Primavera activa, Verano e Invierno)
+        productos_temporada = [
             {
-                'sku': 'VIV-005',
-                'nombre_comun': 'Azalea Rosada',
-                'nombre_cientifico': 'Rhododendron indicum',
-                'precio_unitario': 8900,
-                'stock_actual': 15,
+                'sku': 'HOR-PRI-01',
+                'nombre_comun': 'Almácigo Tomate Limachino',
+                'nombre_cientifico': 'Solanum lycopersicum',
+                'precio_unitario': 2500,
+                'stock_actual': 35,
                 'stock_minimo': 5,
                 'es_fijo': False,
                 'id_temporada': primavera,
                 'descripcion_cuidados': (
-                    'Sustrato ácido bien drenado, semisombra luminosa y riego '
-                    'frecuente durante la floración primaveral.'
+                    'Riego: Profundo en la base, evitar mojar hojas. '
+                    'Luz: Pleno sol (6-8 h). '
+                    'Cosecha: 75-85 días desde trasplante. '
+                    'Trasplantar enterrando parte del tallo en suelo rico en humus y colocar tutor al superar los 35 cm.'
                 ),
             },
             {
-                'sku': 'VIV-006',
-                'nombre_comun': 'Hortensia Azul',
-                'nombre_cientifico': 'Hydrangea macrophylla',
-                'precio_unitario': 9500,
-                'stock_actual': 12,
+                'sku': 'HOR-PRI-02',
+                'nombre_comun': 'Plantín Lechuga Escarola',
+                'nombre_cientifico': 'Cichorium endivia',
+                'precio_unitario': 1600,
+                'stock_actual': 40,
                 'stock_minimo': 5,
                 'es_fijo': False,
                 'id_temporada': primavera,
                 'descripcion_cuidados': (
-                    'Exposición de media sombra en climas del sur. Riego abundante '
-                    'en primavera y verano; suelo ácido para mantener tonos azules.'
+                    'Riego: Frecuente y ligero. '
+                    'Luz: Sol suave o semisombra. '
+                    'Cosecha: 55-65 días. '
+                    'Plantar a 25-30 cm entre plantas en camellón suelto; tolera bien las mañanas frescas del sur.'
                 ),
             },
             {
-                'sku': 'VIV-007',
-                'nombre_comun': 'Lavanda Francesa',
-                'nombre_cientifico': 'Lavandula dentata',
-                'precio_unitario': 4500,
-                'stock_actual': 22,
-                'stock_minimo': 5,
-                'es_fijo': False,
-                'id_temporada': primavera,
-                'descripcion_cuidados': (
-                    'Pleno sol y excelente drenaje. Riego espaciado y poda ligera '
-                    'tras la floración para estimular nuevo follaje.'
-                ),
-            },
-            {
-                'sku': 'VIV-008',
-                'nombre_comun': 'Copihue Rojo',
-                'nombre_cientifico': 'Lapageria rosea',
-                'precio_unitario': 18500,
+                'sku': 'HOR-PRI-03',
+                'nombre_comun': 'Almácigo Pimentón Rojo Calahorra',
+                'nombre_cientifico': 'Capsicum annuum',
+                'precio_unitario': 2800,
                 'stock_actual': 3,
                 'stock_minimo': 5,
                 'es_fijo': False,
                 'id_temporada': primavera,
                 'descripcion_cuidados': (
-                    'Trepadora nativa del bosque valdiviano. Requiere sombra o '
-                    'semisombra fresca, alta humedad ambiental y suelo rico en hoja.'
+                    'Riego: Moderado y constante. '
+                    'Luz: Pleno sol protegido del viento. '
+                    'Cosecha: 80-95 días. '
+                    'Ideal para invernadero o rincón abrigado; evitar heladas tardías y abonar con humus al trasplante.'
                 ),
             },
             {
-                'sku': 'VIV-009',
-                'nombre_comun': 'Arrayán Chileno',
-                'nombre_cientifico': 'Luma apiculata',
-                'precio_unitario': 11900,
-                'stock_actual': 10,
+                'sku': 'HOR-PRI-04',
+                'nombre_comun': 'Plantín Acelga Verde Penca Blanca',
+                'nombre_cientifico': 'Beta vulgaris var. cicla',
+                'precio_unitario': 1500,
+                'stock_actual': 28,
                 'stock_minimo': 5,
                 'es_fijo': False,
                 'id_temporada': primavera,
                 'descripcion_cuidados': (
-                    'Especie nativa perenne de corteza canela. Prefiere suelos húmedos '
-                    'con buen drenaje y exposición soleada a semisombra.'
+                    'Riego: Regular 2-3 veces por semana. '
+                    'Luz: Sol directo o semisombra. '
+                    'Cosecha: 50-60 días. '
+                    'Muy rústica para el clima lluvioso de Los Ríos; cortar hojas externas para estimular nuevos brotes.'
                 ),
             },
             {
-                'sku': 'VIV-010',
-                'nombre_comun': 'Camelia Blanca',
-                'nombre_cientifico': 'Camellia japonica',
-                'precio_unitario': 12500,
+                'sku': 'HOR-PRI-05',
+                'nombre_comun': 'Almácigo Zapallo Italiano',
+                'nombre_cientifico': 'Cucurbita pepo',
+                'precio_unitario': 2200,
                 'stock_actual': 0,
                 'stock_minimo': 5,
                 'es_fijo': False,
                 'id_temporada': primavera,
                 'descripcion_cuidados': (
-                    'Ubicación protegida del viento y heladas tardías. Sustrato ácido '
-                    'húmedo y luz filtrada.'
+                    'Riego: Abundante en la base. '
+                    'Luz: Pleno sol. '
+                    'Cosecha: 50-60 días. '
+                    'Trasplantar sin dañar el pan de raíces dejando 80 cm entre plantas en suelo fértil y bien drenado.'
+                ),
+            },
+            {
+                'sku': 'HOR-PRI-06',
+                'nombre_comun': 'Plantín Cilantro Criollo',
+                'nombre_cientifico': 'Coriandrum sativum',
+                'precio_unitario': 1400,
+                'stock_actual': 32,
+                'stock_minimo': 5,
+                'es_fijo': False,
+                'id_temporada': primavera,
+                'descripcion_cuidados': (
+                    'Riego: Frecuente sin encharcar. '
+                    'Luz: Semisombra luminosa. '
+                    'Cosecha: 35-45 días. '
+                    'Evitar estrés hídrico para retrasar la subida a flor; ideal para siembra escalonada en huerta familiar.'
+                ),
+            },
+            {
+                'sku': 'HOR-VER-01',
+                'nombre_comun': 'Almácigo Albahaca Genovesa',
+                'nombre_cientifico': 'Ocimum basilicum',
+                'precio_unitario': 1900,
+                'stock_actual': 15,
+                'stock_minimo': 5,
+                'es_fijo': False,
+                'id_temporada': verano,
+                'descripcion_cuidados': (
+                    'Riego: Diario suave en verano. '
+                    'Luz: Pleno sol cálido. '
+                    'Cosecha: 45-60 días. '
+                    'Despuntar las yemas florales para mantener hojas tiernas y aromáticas; sensible al frío nocturno.'
+                ),
+            },
+            {
+                'sku': 'HOR-INV-01',
+                'nombre_comun': 'Plantín Repollo Crespo de Invierno',
+                'nombre_cientifico': 'Brassica oleracea',
+                'precio_unitario': 1700,
+                'stock_actual': 25,
+                'stock_minimo': 5,
+                'es_fijo': False,
+                'id_temporada': invierno,
+                'descripcion_cuidados': (
+                    'Riego: Moderado, aprovechando lluvia invernal. '
+                    'Luz: Sol pleno a semisombra. '
+                    'Cosecha: 85-100 días. '
+                    'Excelente resistencia a heladas y humedad de la Región de Los Ríos; plantar a 45 cm de distancia.'
                 ),
             },
         ]
 
-        todos_productos = productos_permanentes + productos_primavera
+        todos_productos = productos_permanentes + productos_temporada
 
         for datos in todos_productos:
             sku = datos['sku']
@@ -244,12 +321,12 @@ class Command(BaseCommand):
                     id_usuario=admin_user,
                     stock_anterior=0,
                     stock_nuevo=producto.stock_actual,
-                    motivo_ajuste='Carga inicial de inventario (seed_vivero)',
+                    motivo_ajuste='Carga inicial catálogo hortícola (seed_vivero)',
                 )
 
         self.stdout.write(
             self.style.SUCCESS(
-                f'✔ {len(todos_productos)} productos iniciales (4 permanentes y 6 de Primavera) '
-                'poblados exitosamente.'
+                f'✔ {len(todos_productos)} productos hortícolas '
+                '(4 permanentes y 8 estacionales) poblados exitosamente.'
             )
         )

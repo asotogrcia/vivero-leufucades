@@ -3,9 +3,9 @@
 
 {% block title %}Inventario Maestro — Vivero Leufucades{% endblock %}
 
-{% block page_title %}Inventario de Especies{% endblock %}
+{% block page_title %}Inventario Hortícola{% endblock %}
 {% block page_subtitle %}
-<p class="text-xs text-[#52606D] mt-0.5">Gestión de catálogo, precios ($CLP) y control de stock</p>
+<p class="text-xs text-[#52606D] mt-0.5">Gestión de hortalizas, almácigos, plantines, precios ($CLP) y control de stock</p>
 {% endblock %}
 
 {% block content %}
@@ -62,7 +62,7 @@
                 href="{% url 'core:producto_nuevo' %}"
                 class="min-h-[44px] inline-flex items-center px-4 rounded-lg bg-[#1B4332] hover:bg-[#2D6A4F] text-white text-sm font-medium transition-colors"
             >
-                + Nueva Especie
+                + Ingresar Hortaliza
             </a>
         </div>
     </div>
@@ -73,7 +73,7 @@
             <table class="w-full text-left text-sm">
                 <thead class="bg-[#F9FAF8] border-b border-[#E2E8E4] text-xs uppercase text-[#52606D]">
                     <tr>
-                        <th class="px-4 py-3 font-semibold">Especie</th>
+                        <th class="px-4 py-3 font-semibold">Hortaliza / Insumo</th>
                         <th class="px-4 py-3 font-semibold">Ciclo</th>
                         <th class="px-4 py-3 font-semibold text-right">Precio ($CLP)</th>
                         <th class="px-4 py-3 font-semibold text-right">Stock</th>
