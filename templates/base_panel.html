@@ -220,18 +220,83 @@
             </header>
 
             <div class="p-4 sm:p-6">
-                {% if messages %}
-                <div class="mb-5 space-y-2" aria-live="polite">
-                    {% for message in messages %}
-                    <div class="rounded-xl px-4 py-3 text-sm font-medium border {% if message.tags == 'error' %}bg-[#FEF2F2] border-[#FECACA] text-[#991B1B]{% else %}bg-[#D8F3DC] border-[#B7E4C7] text-[#1B4332]{% endif %}">
-                        {{ message }}
-                    </div>
-                    {% endfor %}
-                </div>
-                {% endif %}
                 {% block content %}{% endblock %}
             </div>
         </main>
+    </div>
+
+    {% if messages %}
+    <div
+        id="toast-container"
+        class="fixed top-5 right-5 z-50 flex flex-col gap-2.5 w-full max-w-sm px-4 sm:px-0 pointer-events-none"
+        aria-live="polite"
+        aria-atomic="true"
+    >
+        {% for message in messages %}
+        <div
+            role="status"
+            data-toast
+            data-toast-timeout="4500"
+            class="toast-item pointer-events-auto flex items-start justify-between gap-3 rounded-xl px-4 py-3 text-sm font-medium border shadow-lg {% if 'error' in message.tags %}bg-[#FEF2F2] border-[#FECACA] text-[#991B1B]{% elif 'warning' in message.tags %}bg-[#FFFBEB] border-[#FDE68A] text-[#92400E]{% else %}bg-[#ECFDF5] border-[#A7F3D0] text-[#065F46]{% endif %}"
+        >
+            <span class="leading-snug">{{ message }}</span>
+            <button
+                type="button"
+                data-toast-close
+                aria-label="Cerrar notificación"
+                class="shrink-0 min-h-[28px] min-w-[28px] -mr-1 -mt-0.5 inline-flex items-center justify-center rounded-lg text-base leading-none opacity-75 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-current"
+            >
+                &times;
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div
+        id="modal-confirmacion"
+        class="hidden fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-confirmacion-titulo"
+        aria-describedby="modal-confirmacion-mensaje"
+    >
+        <div class="bg-white border border-[#E2E8E4] rounded-xl w-full max-w-md p-6 shadow-xl space-y-4">
+            <div class="flex items-start justify-between gap-3">
+                <h2 id="modal-confirmacion-titulo" class="text-lg font-semibold text-[#1F2933]">
+                    Confirmar acción
+                </h2>
+                <button
+                    type="button"
+                    id="modal-confirmacion-cerrar"
+                    aria-label="Cerrar"
+                    class="min-h-[44px] min-w-[44px] -mr-2 -mt-2 inline-flex items-center justify-center rounded-lg text-lg text-[#52606D] hover:text-[#1F2933] focus:outline-none focus:ring-2 focus:ring-[#2D6A4F]"
+                >
+                    &times;
+                </button>
+            </div>
+
+            <p id="modal-confirmacion-mensaje" class="text-sm text-[#52606D] leading-relaxed">
+                El registro pasará a "Dados de Baja" y podrá reactivarse en cualquier momento sin perder su historial.
+            </p>
+
+            <div class="flex flex-wrap items-center justify-end gap-2.5 pt-2 border-t border-[#E2E8E4]">
+                <button
+                    type="button"
+                    id="modal-confirmacion-cancelar"
+                    class="min-h-[44px] px-4 rounded-lg border border-[#E2E8E4] bg-white hover:bg-[#F9FAF8] text-sm font-medium text-[#52606D] transition-colors focus:outline-none focus:ring-2 focus:ring-[#2D6A4F]"
+                >
+                    Cancelar
+                </button>
+                <button
+                    type="button"
+                    id="modal-confirmacion-confirmar"
+                    class="min-h-[44px] px-5 rounded-lg bg-[#991B1B] hover:bg-[#7F1D1D] text-white text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-[#991B1B] focus:ring-offset-1"
+                >
+                    Confirmar
+                </button>
+            </div>
+        </div>
     </div>
 
     <script src="{% static 'js/panel.js' %}" defer></script>

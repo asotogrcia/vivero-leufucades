@@ -57,6 +57,12 @@
             >
                 Agotados ({{ resumen_inventario.total_agotados }})
             </a>
+            <a
+                href="{% url 'core:inventario_list' %}?estado=inactivos{% if query %}&q={{ query|urlencode }}{% endif %}"
+                class="min-h-[44px] inline-flex items-center px-3.5 rounded-lg text-xs font-semibold border transition-colors {% if estado_seleccionado == 'inactivos' %}bg-[#52606D] border-[#52606D] text-white{% else %}bg-white border-[#E2E8E4] text-[#52606D] hover:bg-[#F9FAF8]{% endif %}"
+            >
+                Dados de Baja ({{ resumen_inventario.total_inactivos }})
+            </a>
 
             <a
                 href="{% url 'core:producto_nuevo' %}"
@@ -101,6 +107,11 @@
                                     <p class="font-semibold text-[#1F2933]">
                                         <span class="font-mono text-xs text-[#52606D] mr-1">{{ prod.sku }}</span>
                                         {{ prod.nombre_comun }}
+                                        {% if not prod.activo %}
+                                        <span class="ml-1.5 inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#F2F4F2] border border-[#E2E8E4] text-[#52606D]">
+                                            Dado de baja
+                                        </span>
+                                        {% endif %}
                                     </p>
                                     {% if prod.nombre_cientifico %}
                                     <p class="text-xs italic text-[#52606D]">{{ prod.nombre_cientifico }}</p>
@@ -139,6 +150,7 @@
                         </td>
                         <td class="px-4 py-3 text-right whitespace-nowrap">
                             <div class="inline-flex items-center justify-end gap-2">
+                                {% if prod.activo %}
                                 <button
                                     type="button"
                                     data-ajuste-id="{{ prod.id_producto }}"
@@ -148,19 +160,25 @@
                                 >
                                     Ajustar Stock
                                 </button>
+                                {% endif %}
                                 <a
                                     href="{% url 'core:producto_editar' prod.id_producto %}"
                                     class="min-h-[44px] inline-flex items-center px-3 rounded-lg border border-[#E2E8E4] bg-white hover:bg-[#F9FAF8] text-xs font-medium text-[#1F2933] transition-colors"
                                 >
                                     Editar
                                 </a>
+                                {% if prod.activo %}
                                 <form
                                     method="post"
-                                    action="{% url 'core:producto_desactivar' prod.id_producto %}"
-                                    data-confirm="¿Desactivar {{ prod.nombre_comun|escape }} del catálogo?"
+                                    action="{% url 'core:producto_toggle_estado' prod.id_producto %}"
+                                    data-confirm-title="Desactivar especie del catálogo"
+                                    data-confirm-message="La especie &laquo;{{ prod.nombre_comun|escape }}&raquo; ({{ prod.sku|escape }}) pasará a &laquo;Dados de Baja&raquo; y dejará de mostrarse en el catálogo público. Podrás reactivarla en cualquier momento sin perder su historial."
+                                    data-confirm-button="Sí, desactivar"
                                     class="inline"
                                 >
                                     {% csrf_token %}
+                                    <input type="hidden" name="nuevo_estado" value="false">
+                                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
                                     <button
                                         type="submit"
                                         class="min-h-[44px] px-3 rounded-lg border border-[#FECACA] bg-[#FEF2F2] hover:bg-[#991B1B] text-[#991B1B] hover:text-white text-xs font-medium transition-colors"
@@ -168,6 +186,23 @@
                                         Desactivar
                                     </button>
                                 </form>
+                                {% else %}
+                                <form
+                                    method="post"
+                                    action="{% url 'core:producto_toggle_estado' prod.id_producto %}"
+                                    class="inline"
+                                >
+                                    {% csrf_token %}
+                                    <input type="hidden" name="nuevo_estado" value="true">
+                                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                    <button
+                                        type="submit"
+                                        class="min-h-[44px] px-3.5 rounded-lg border border-[#B7E4C7] bg-[#D8F3DC] hover:bg-[#1B4332] text-[#1B4332] hover:text-white text-xs font-semibold transition-colors"
+                                    >
+                                        Reactivar
+                                    </button>
+                                </form>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>

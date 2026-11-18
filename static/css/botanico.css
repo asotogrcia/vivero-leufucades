@@ -1,4 +1,4 @@
-﻿/* Botánico Minimalista — Vivero Leufucades */
+/* Botánico Minimalista — Vivero Leufucades */
 :root {
     --verde-bosque: #1B4332;
     --verde-hoja: #2D6A4F;
@@ -30,6 +30,30 @@
 }
 @media (prefers-reduced-motion: reduce) {
     .img-skeleton { animation: none; }
+    .toast-item {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
+/* Notificaciones Toast flotantes */
+@keyframes toast-enter {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+.toast-item {
+    animation: toast-enter 0.2s ease-out;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.toast-item.is-closing {
+    opacity: 0;
+    transform: translateX(16px);
 }
 
 /* Comprobante de caja: impresión limpia */

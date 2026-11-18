@@ -154,8 +154,37 @@ def ajustar_stock_producto(
         )
 
 
-def desactivar_producto(producto_id: int) -> Producto:
+def alternar_estado_producto(
+    producto_id: int,
+    usuario,
+    nuevo_estado: bool,
+) -> Producto:
+    """Alterna el estado activo/inactivo de un producto de forma reversible y auditable."""
+    with transaction.atomic():
+        producto = Producto.objects.select_for_update().get(pk=producto_id)
+        estado_booleano = bool(nuevo_estado)
+        producto.activo = estado_booleano
+        producto.save(update_fields=['activo'])
+
+        motivo = (
+            '[Reactivación] Especie habilitada nuevamente en vitrina'
+            if estado_booleano
+            else '[Baja de Catálogo] Especie ocultada de vitrina'
+        )
+        AuditoriaStock.objects.create(
+            id_producto=producto,
+            id_usuario=usuario,
+            stock_anterior=producto.stock_actual,
+            stock_nuevo=producto.stock_actual,
+            motivo_ajuste=motivo,
+        )
+        return producto
+
+
+def desactivar_producto(producto_id: int, usuario=None) -> Producto:
     """Realiza borrado lógico (activo=False) de un producto dentro de una transacción."""
+    if usuario is not None:
+        return alternar_estado_producto(producto_id, usuario, False)
     with transaction.atomic():
         producto = Producto.objects.select_for_update().filter(pk=producto_id).first()
         if producto is None:

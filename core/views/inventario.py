@@ -1,7 +1,10 @@
+from urllib.parse import urlencode
+
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db.models import Count, ExpressionWrapper, F, IntegerField, Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views import View
@@ -13,8 +16,8 @@ from core.models import AuditoriaStock, Producto, Temporada
 from services.inventario import (
     activar_temporada_comercial,
     ajustar_stock_producto,
+    alternar_estado_producto,
     crear_o_actualizar_producto,
-    desactivar_producto,
 )
 
 
@@ -29,22 +32,26 @@ class InventarioListView(ListView):
 
     def _resolver_estado(self) -> str:
         estado = self.request.GET.get('estado', 'todos').strip().lower()
-        if estado in ('todos', 'critico', 'agotados'):
+        if estado == 'criticos':
+            return 'critico'
+        if estado in ('todos', 'activos', 'critico', 'agotados', 'inactivos'):
             return estado
         return 'todos'
 
     def get_queryset(self):
-        queryset = (
-            Producto.objects.select_related('id_temporada')
-            .filter(activo=True)
-            .order_by('nombre_comun', 'sku')
+        queryset = Producto.objects.select_related('id_temporada').order_by(
+            'nombre_comun', 'sku'
         )
 
         estado = self._resolver_estado()
-        if estado == 'critico':
-            queryset = queryset.filter(stock_actual__lte=F('stock_minimo'))
-        elif estado == 'agotados':
-            queryset = queryset.filter(stock_actual=0)
+        if estado == 'inactivos':
+            queryset = queryset.filter(activo=False)
+        else:
+            queryset = queryset.filter(activo=True)
+            if estado == 'critico':
+                queryset = queryset.filter(stock_actual__lte=F('stock_minimo'))
+            elif estado == 'agotados':
+                queryset = queryset.filter(stock_actual=0)
 
         query = self.request.GET.get('q', '').strip()
         if query:
@@ -58,13 +65,17 @@ class InventarioListView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        resumen = Producto.objects.filter(activo=True).aggregate(
-            total_activos=Count('id_producto'),
+        resumen = Producto.objects.aggregate(
+            total_activos=Count('id_producto', filter=Q(activo=True)),
             total_criticos=Count(
                 'id_producto',
-                filter=Q(stock_actual__lte=F('stock_minimo')),
+                filter=Q(activo=True, stock_actual__lte=F('stock_minimo')),
             ),
-            total_agotados=Count('id_producto', filter=Q(stock_actual=0)),
+            total_agotados=Count(
+                'id_producto',
+                filter=Q(activo=True, stock_actual=0),
+            ),
+            total_inactivos=Count('id_producto', filter=Q(activo=False)),
         )
         context.update(
             {
@@ -157,19 +168,68 @@ class ProductoUpdateView(View):
 
 
 @method_decorator(requiere_administradora, name='dispatch')
-class ProductoDesactivarView(View):
-    """Borrado lógico (activo=False) de producto exclusivo por POST."""
+class ProductoToggleEstadoView(View):
+    """Alterna de forma reversible el estado activo/inactivo del producto exclusivo por POST."""
 
     http_method_names = ['post']
 
-    def post(self, request, producto_id):
-        producto = get_object_or_404(Producto, pk=producto_id)
-        desactivar_producto(producto.id_producto)
-        messages.success(
-            request,
-            f'Especie "{producto.nombre_comun}" ({producto.sku}) desactivada del catálogo.',
+    def _redirect_destino(self, request):
+        next_url = request.POST.get('next', '').strip()
+        if next_url and url_has_allowed_host_and_scheme(
+            url=next_url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        ):
+            return redirect(next_url)
+
+        params = {}
+        estado = (request.POST.get('estado') or request.GET.get('estado') or '').strip()
+        query = (request.POST.get('q') or request.GET.get('q') or '').strip()
+        if estado:
+            params['estado'] = estado
+        if query:
+            params['q'] = query
+
+        base_url = reverse('core:inventario_list')
+        if params:
+            return redirect(f'{base_url}?{urlencode(params)}')
+        return redirect(base_url)
+
+    def _resolver_nuevo_estado(self, request, producto: Producto) -> bool:
+        raw = request.POST.get('nuevo_estado')
+        if raw is None:
+            raw = request.POST.get('activo')
+        if raw is not None:
+            return str(raw).strip().lower() in ('true', '1', 'si', 'sí', 'on', 'activar')
+        return not producto.activo
+
+    def post(self, request, pk=None, producto_id=None):
+        target_id = pk if pk is not None else producto_id
+        producto = get_object_or_404(Producto, pk=target_id)
+        nuevo_estado = self._resolver_nuevo_estado(request, producto)
+        producto_actualizado = alternar_estado_producto(
+            producto_id=producto.id_producto,
+            usuario=request.user,
+            nuevo_estado=nuevo_estado,
         )
-        return redirect('core:inventario_list')
+        if nuevo_estado:
+            messages.success(
+                request,
+                f'Especie "{producto_actualizado.nombre_comun}" ({producto_actualizado.sku}) '
+                'reactivada y visible nuevamente en vitrina.',
+            )
+        else:
+            messages.warning(
+                request,
+                f'Especie "{producto_actualizado.nombre_comun}" ({producto_actualizado.sku}) '
+                'pasó a Dados de Baja y fue ocultada del catálogo público.',
+            )
+        return self._redirect_destino(request)
+
+
+@method_decorator(requiere_administradora, name='dispatch')
+class ProductoDesactivarView(ProductoToggleEstadoView):
+    """Alias compatible de borrado lógico reversible por POST."""
 
 
 @method_decorator(requiere_administradora, name='dispatch')

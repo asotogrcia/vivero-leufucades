@@ -703,6 +703,7 @@ class InventarioViewsRBACTests(TestCase):
             MaestrosTemporadasView,
             ProductoCreateView,
             ProductoDesactivarView,
+            ProductoToggleEstadoView,
             ProductoUpdateView,
         )
 
@@ -719,6 +720,11 @@ class InventarioViewsRBACTests(TestCase):
             (AuditoriaListView.as_view(), reverse('core:inventario_auditoria'), {}),
         ]
         casos_post = [
+            (
+                ProductoToggleEstadoView.as_view(),
+                reverse('core:producto_toggle_estado', args=[self.prod_ok.id_producto]),
+                {'pk': self.prod_ok.id_producto},
+            ),
             (
                 ProductoDesactivarView.as_view(),
                 reverse('core:producto_desactivar', args=[self.prod_ok.id_producto]),
@@ -1103,19 +1109,46 @@ class AuditoriaQAXPTests(TestCase):
         self.primavera = Temporada.objects.create(nombre='Primavera', es_activa=True)
         self.verano = Temporada.objects.create(nombre='Verano', es_activa=False)
 
-    def _get_vista(self, path: str, user, data=None):
-        """Resuelve la ruta real y ejecuta la vista con sesión (compatible Python 3.12-3.14)."""
+    def _call_ruta(self, method: str, path: str, user, data=None, session=None, cookies=None):
+        """Resuelve la ruta real y ejecuta la vista con sesión y mensajes (compatible Python 3.12-3.14)."""
+        from urllib.parse import parse_qs, urlparse
+
         from django.contrib.messages.middleware import MessageMiddleware
         from django.urls import resolve
 
-        match = resolve(path)
-        req = self.factory.get(path, data or {})
-        _attach_session(req)
-        MessageMiddleware(lambda r: HttpResponse()).process_request(req)
+        parsed = urlparse(path)
+        match = resolve(parsed.path)
+        if method == 'POST':
+            req = self.factory.post(parsed.path, data or {})
+        else:
+            query_data = data if data is not None else {
+                k: v[0] if len(v) == 1 else v
+                for k, v in parse_qs(parsed.query).items()
+            }
+            req = self.factory.get(parsed.path, query_data)
+
+        if session is not None:
+            req.session = session
+        else:
+            _attach_session(req)
+        if cookies:
+            for k, morsel in cookies.items():
+                req.COOKIES[k] = morsel.value
         req.user = user
-        resp = match.func(req, *match.args, **match.kwargs)
-        if hasattr(resp, 'render'):
-            resp.render()
+
+        def _exec(request):
+            response = match.func(request, *match.args, **match.kwargs)
+            if hasattr(response, 'render'):
+                response.render()
+            return response
+
+        resp = MessageMiddleware(_exec)(req)
+        req.session.save()
+        return resp, req.session
+
+    def _get_vista(self, path: str, user, data=None):
+        """Resuelve la ruta real y ejecuta la vista con sesión (compatible Python 3.12-3.14)."""
+        resp, _ = self._call_ruta('GET', path, user, data=data)
         return resp
 
     def _crear_jpg_bytes(self, size=(1200, 900)) -> bytes:
@@ -1249,6 +1282,140 @@ class AuditoriaQAXPTests(TestCase):
                 with Image.open(producto.url_imagen.path) as img_webp:
                     self.assertEqual(img_webp.format, 'WEBP')
                     self.assertLessEqual(img_webp.width, 800)
+
+    def test_hu03_desactivacion_reversible_y_auditoria(self):
+        prod = Producto.objects.create(
+            sku='HU03-REV',
+            id_temporada=self.primavera,
+            nombre_comun='Cilantro Orgánico',
+            precio_unitario=2500,
+            stock_actual=14,
+            stock_minimo=5,
+            activo=True,
+        )
+
+        # Visible inicialmente en el catálogo público
+        resp_cat_ini = self._get_vista('/', AnonymousUser())
+        self.assertEqual(resp_cat_ini.status_code, 200)
+        self.assertIn('Cilantro Orgánico', resp_cat_ini.content.decode('utf-8'))
+
+        # Operador de Mesón no puede alternar estado (403 Forbidden)
+        url_toggle = reverse('core:producto_toggle_estado', args=[prod.id_producto])
+        resp_forbidden, _ = self._call_ruta(
+            'POST',
+            url_toggle,
+            self.operador_user,
+            data={'nuevo_estado': 'false'},
+        )
+        self.assertEqual(resp_forbidden.status_code, 403)
+
+        # Administradora accede al inventario y ve modal defensivo + pestaña Dados de Baja
+        resp_inv = self._get_vista('/inventario/', self.admin_user)
+        self.assertEqual(resp_inv.status_code, 200)
+        html_inv = resp_inv.content.decode('utf-8')
+        self.assertIn('id="modal-confirmacion"', html_inv)
+        self.assertIn('data-confirm-title', html_inv)
+        self.assertIn('data-confirm-message', html_inv)
+        self.assertIn('Dados de Baja (0)', html_inv)
+
+        # 1. Desactivar vía POST preservando filtros activos
+        resp_baja_post, session = self._call_ruta(
+            'POST',
+            url_toggle,
+            self.admin_user,
+            data={
+                'nuevo_estado': 'false',
+                'estado': 'todos',
+                'q': 'Cilantro',
+            },
+        )
+        self.assertEqual(resp_baja_post.status_code, 302)
+        self.assertEqual(resp_baja_post.url, '/inventario/?estado=todos&q=Cilantro')
+
+        resp_baja, session = self._call_ruta(
+            'GET',
+            resp_baja_post.url,
+            self.admin_user,
+            session=session,
+            cookies=resp_baja_post.cookies,
+        )
+        self.assertEqual(resp_baja.status_code, 200)
+        html_baja = resp_baja.content.decode('utf-8')
+        self.assertIn('id="toast-container"', html_baja)
+        self.assertIn('bg-[#FFFBEB]', html_baja)
+        self.assertIn('text-[#92400E]', html_baja)
+
+        prod.refresh_from_db()
+        self.assertFalse(prod.activo)
+
+        # Desaparece del catálogo público (/)
+        resp_cat_baja = self._get_vista('/', AnonymousUser())
+        self.assertEqual(resp_cat_baja.status_code, 200)
+        self.assertNotIn('Cilantro Orgánico', resp_cat_baja.content.decode('utf-8'))
+
+        # Aparece en ?estado=inactivos con badge y botón Reactivar
+        resp_inactivos = self._get_vista(
+            '/inventario/',
+            self.admin_user,
+            data={'estado': 'inactivos'},
+        )
+        self.assertEqual(resp_inactivos.status_code, 200)
+        html_inactivos = resp_inactivos.content.decode('utf-8')
+        self.assertIn('Cilantro Orgánico', html_inactivos)
+        self.assertIn('Dado de baja', html_inactivos)
+        self.assertIn('Reactivar', html_inactivos)
+        self.assertIn('Dados de Baja (1)', html_inactivos)
+
+        # Auditoría inmutable de baja sin alterar stock
+        aud_baja = AuditoriaStock.objects.get(
+            id_producto=prod,
+            motivo_ajuste='[Baja de Catálogo] Especie ocultada de vitrina',
+        )
+        self.assertEqual(aud_baja.id_usuario, self.admin_user)
+        self.assertEqual(aud_baja.stock_anterior, 14)
+        self.assertEqual(aud_baja.stock_nuevo, 14)
+
+        # 2. Reactivar vía POST y verificar regreso a vitrina pública + auditoría
+        resp_react_post, session = self._call_ruta(
+            'POST',
+            url_toggle,
+            self.admin_user,
+            data={
+                'nuevo_estado': 'true',
+                'estado': 'inactivos',
+            },
+            session=session,
+        )
+        self.assertEqual(resp_react_post.status_code, 302)
+        self.assertEqual(resp_react_post.url, '/inventario/?estado=inactivos')
+
+        resp_react, _ = self._call_ruta(
+            'GET',
+            resp_react_post.url,
+            self.admin_user,
+            session=session,
+            cookies=resp_react_post.cookies,
+        )
+        self.assertEqual(resp_react.status_code, 200)
+        html_react = resp_react.content.decode('utf-8')
+        self.assertIn('id="toast-container"', html_react)
+        self.assertIn('bg-[#ECFDF5]', html_react)
+        self.assertIn('text-[#065F46]', html_react)
+
+        prod.refresh_from_db()
+        self.assertTrue(prod.activo)
+
+        aud_react = AuditoriaStock.objects.get(
+            id_producto=prod,
+            motivo_ajuste='[Reactivación] Especie habilitada nuevamente en vitrina',
+        )
+        self.assertEqual(aud_react.id_usuario, self.admin_user)
+        self.assertEqual(aud_react.stock_anterior, 14)
+        self.assertEqual(aud_react.stock_nuevo, 14)
+
+        resp_cat_final = self._get_vista('/', AnonymousUser())
+        self.assertEqual(resp_cat_final.status_code, 200)
+        self.assertIn('Cilantro Orgánico', resp_cat_final.content.decode('utf-8'))
 
     def test_hu04_venta_calculo_iva_dl825_e_idempotencia(self):
         prod = Producto.objects.create(

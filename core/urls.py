@@ -13,6 +13,7 @@ from core.views.inventario import (
     MaestrosTemporadasView,
     ProductoCreateView,
     ProductoDesactivarView,
+    ProductoToggleEstadoView,
     ProductoUpdateView,
 )
 from core.views.reportes import ReporteExcelView
@@ -39,6 +40,11 @@ urlpatterns = [
         'inventario/editar/<int:producto_id>/',
         ProductoUpdateView.as_view(),
         name='producto_editar',
+    ),
+    path(
+        'inventario/estado/<int:pk>/',
+        ProductoToggleEstadoView.as_view(),
+        name='producto_toggle_estado',
     ),
     path(
         'inventario/desactivar/<int:producto_id>/',
